@@ -1,6 +1,6 @@
-# Chowdeck (clone)
+# ChowChow
 
-A production-shaped, from-scratch build of a Chowdeck-style on-demand food/grocery
+A production-shaped, from-scratch build of a an on-demand food/grocery
 delivery platform — a three-sided, real-time logistics marketplace (customers, vendors,
 riders).
 
