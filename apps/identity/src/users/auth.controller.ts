@@ -1,7 +1,12 @@
 import { Body, Controller, Get, Inject, Post } from "@nestjs/common";
 import type { MessageProducer } from "@chowdeck/kafka";
+import { ZodValidationPipe } from "@chowdeck/nest";
 import { MESSAGE_PRODUCER } from "../messaging/tokens";
-import { UsersService, type RegisterInput } from "./users.service";
+import { UsersService } from "./users.service";
+import {
+  registerRequestSchema,
+  type RegisterRequest,
+} from "./dto/register.request";
 
 @Controller("auth")
 export class AuthController {
@@ -11,7 +16,9 @@ export class AuthController {
   ) {}
 
   @Post("register")
-  async register(@Body() body: RegisterInput) {
+  async register(
+    @Body(new ZodValidationPipe(registerRequestSchema)) body: RegisterRequest,
+  ) {
     const user = await this.users.register(body);
     return { user };
   }

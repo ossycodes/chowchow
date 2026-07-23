@@ -13,5 +13,6 @@ little jargon as possible. If the code is the "how", these are the "what and why
 3. [Events & the Outbox — how services talk without losing messages](03-events-and-the-outbox.md)
 4. [The Notifications Service — listening for events (and not acting twice)](04-notifications-listening-for-events.md)
 5. [A Real Database — MySQL, transactions, migrations](05-a-real-database.md)
+6. [Guarding the Doors — input validation & fail-fast config](06-guarding-the-doors-validation.md)
 
 _(More added as we build. See the roadmap in [../ARCHITECTURE.md](../ARCHITECTURE.md).)_

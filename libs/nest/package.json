@@ -1,0 +1,23 @@
+{
+  "name": "@chowdeck/nest",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.4.15",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

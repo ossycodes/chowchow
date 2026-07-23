@@ -140,6 +140,43 @@ Tells pnpm which folders are packages: `apps/*` and `libs/*`. pnpm then symlinks
 internal packages (e.g. `@chowdeck/contracts`) into each other's `node_modules`, so
 `import ... from "@chowdeck/contracts"` just works without publishing anything.
 
+#### What `"@chowdeck/nest": "workspace:*"` means
+
+Inside a service's `package.json` you'll see internal dependencies written like this:
+
+```json
+"dependencies": {
+  "@chowdeck/nest": "workspace:*"
+}
+```
+
+It says: *"depend on the `@chowdeck/nest` package that lives in **this monorepo**, at
+whatever version it currently is."* Two parts:
+
+- **`@chowdeck/nest`** — the package **name** (declared by `libs/nest/package.json`'s
+  `"name"` field). The `@chowdeck/` prefix is a **scope** — a namespace grouping all our
+  internal packages (`@chowdeck/contracts`, `@chowdeck/kafka`, `@chowdeck/nest`).
+- **`workspace:*`** — a pnpm protocol:
+  - **`workspace:`** → "resolve this from the **local workspace**, not the npm registry."
+    Without it, pnpm would try to download it from npmjs.com (where it doesn't exist — it's
+    our private code). With it, pnpm **symlinks** `node_modules/@chowdeck/nest` → `libs/nest`.
+  - **`*`** → the version range: "any version." Since it's local, we don't pin a number.
+
+Why it matters:
+
+```
+apps/identity/node_modules/@chowdeck/nest  ──symlink──►  libs/nest
+```
+
+- Edit a file in `libs/nest` → identity sees it immediately (after a rebuild). No copy, no
+  publish, no version bump.
+- Turborepo reads these `workspace:*` deps to build the **dependency graph** — that's how it
+  knows to build `@chowdeck/nest` *before* `identity`.
+- On publish (if we ever did), pnpm auto-replaces `workspace:*` with the real version.
+
+In short: **`workspace:*` = "this is one of our own in-repo packages; link it locally
+instead of downloading it."**
+
 ### `turbo.json`
 Turborepo's task graph. `"dependsOn": ["^build"]` means "before building me, build my
 dependencies" (the `^` = upstream packages). That's why `contracts` always compiles before

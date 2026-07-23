@@ -2,8 +2,13 @@ import { randomUUID } from "node:crypto";
 import { Body, Controller, Get, Post } from "@nestjs/common";
 import { ActorType, IdentityEventType } from "@chowdeck/contracts";
 import { wrapEvent } from "@chowdeck/kafka";
+import { ZodValidationPipe } from "@chowdeck/nest";
 import { NotificationsService } from "./notifications.service";
 import { ConsumerRunner } from "../messaging/consumer.runner";
+import {
+  simulateRequestSchema,
+  type SimulateRequest,
+} from "./dto/simulate.request";
 
 @Controller("notifications")
 export class NotificationsController {
@@ -25,7 +30,7 @@ export class NotificationsController {
    */
   @Post("_simulate")
   async simulate(
-    @Body() body: { email?: string; userId?: string; eventId?: string },
+    @Body(new ZodValidationPipe(simulateRequestSchema)) body: SimulateRequest,
   ) {
     const event = wrapEvent(
       IdentityEventType.UserRegistered,

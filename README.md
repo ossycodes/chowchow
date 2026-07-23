@@ -39,6 +39,7 @@ apps/            one NestJS app per microservice (independently deployable)
 libs/
   contracts/       shared event schemas + DTOs (the ONLY cross-service coupling)
   kafka/           producer + outbox pattern + relay (framework-agnostic)
+  nest/            shared NestJS utils: Zod validation pipe + fail-fast env config
 infra/
   docker-compose.yml   mysql, redis, redpanda (kafka), redpanda-console
   mysql/init/          per-service database bootstrap
@@ -105,7 +106,10 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
       `notifications` subscribes to `user.registered` → welcome (dedupes duplicates).
       Full publish→subscribe loop proven.
 - [x] **Real database:** `identity` persists to MySQL via **Drizzle ORM**; user + outbox
-      written in one transaction; drizzle-kit migrations; unique-email → 409. *(current)*
+      written in one transaction; drizzle-kit migrations; unique-email → 409.
+- [x] **Validation hardening:** shared `@chowdeck/nest` (Zod validation pipe + fail-fast
+      env config); request DTOs with DB-aligned bounds; public register forced to
+      `customer` (privilege fix); input whitelisting. *(current)*
 - [ ] Phase 1 — catalog + ordering
 - [ ] Phase 2 — dispatch + realtime
 - [ ] Phase 3 — money hardening (ledger, settlements)

@@ -1,27 +1,16 @@
 import { randomUUID } from "node:crypto";
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-} from "@nestjs/common";
+import { ConflictException, Injectable } from "@nestjs/common";
 import { eq } from "drizzle-orm";
-import { ZodError } from "zod";
 import {
   ActorType,
   IdentityEventType,
   Topics,
-  userRegisteredSchema,
   type UserRegistered,
 } from "@chowdeck/contracts";
 import { wrapEvent } from "@chowdeck/kafka";
 import { DbService } from "../db/db.service";
 import { outboxEvents, users } from "../db/schema";
-
-export interface RegisterInput {
-  email?: string;
-  phone?: string;
-  actorType?: ActorType;
-}
+import type { RegisterRequest } from "./dto/register.request";
 
 export type UserRecord = UserRegistered;
 
@@ -33,22 +22,18 @@ interface MysqlError {
 export class UsersService {
   constructor(private readonly dbService: DbService) {}
 
-  async register(input: RegisterInput): Promise<UserRecord> {
-    // 1. Validate the input against the shared schema.
-    let user: UserRecord;
-    try {
-      user = userRegisteredSchema.parse({
-        userId: randomUUID(),
-        actorType: input.actorType ?? ActorType.Customer,
-        email: input.email,
-        phone: input.phone,
-      });
-    } catch (err) {
-      if (err instanceof ZodError) {
-        throw new BadRequestException(err.issues.map((i) => i.message));
-      }
-      throw err;
-    }
+  /**
+   * Registers a customer. Input is already validated by ZodValidationPipe at the
+   * controller boundary, so here we trust it. `actorType` is forced to `customer` —
+   * public registration can never create a vendor/rider/admin.
+   */
+  async register(input: RegisterRequest): Promise<UserRecord> {
+    const user: UserRecord = {
+      userId: randomUUID(),
+      actorType: ActorType.Customer,
+      email: input.email,
+      phone: input.phone,
+    };
 
     const event = wrapEvent<UserRegistered>(
       IdentityEventType.UserRegistered,
@@ -56,8 +41,7 @@ export class UsersService {
       { producer: "identity", correlationId: user.userId },
     );
 
-    // 2. Insert the user AND the outbox event in ONE transaction — either both commit
-    //    or neither does. No user without its event; no event without its user.
+    // Insert the user AND the outbox event in ONE transaction — both commit or neither.
     try {
       await this.dbService.db.transaction(async (tx) => {
         await tx.insert(users).values({
