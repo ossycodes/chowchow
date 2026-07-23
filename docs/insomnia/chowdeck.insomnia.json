@@ -1,0 +1,203 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-07-23T12:55:00.000Z",
+  "__export_source": "chowdeck.hand-authored",
+  "resources": [
+    {
+      "_id": "wrk_chowdeck",
+      "_type": "workspace",
+      "parentId": null,
+      "name": "Chowdeck (local)",
+      "description": "Local API collection for the Chowdeck clone. Requires `pnpm infra:up` and the identity (:3001) + notifications (:3002) services running. URLs are hardcoded to localhost — see docs/RUNBOOK.md.",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_base",
+      "_type": "environment",
+      "parentId": "wrk_chowdeck",
+      "name": "Base Environment",
+      "data": {
+        "identity_url": "http://localhost:3001",
+        "notifications_url": "http://localhost:3002"
+      },
+      "dataPropertyOrder": {
+        "&": ["identity_url", "notifications_url"]
+      },
+      "metaSortKey": 1,
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_identity",
+      "_type": "request_group",
+      "parentId": "wrk_chowdeck",
+      "name": "identity  (:3001)",
+      "description": "Accounts + registration. Persists to MySQL; emits user.registered via the outbox.",
+      "metaSortKey": 100
+    },
+    {
+      "_id": "req_id_health",
+      "_type": "request",
+      "parentId": "fld_identity",
+      "name": "Health",
+      "method": "GET",
+      "url": "http://localhost:3001/health",
+      "body": {},
+      "headers": [],
+      "metaSortKey": 101
+    },
+    {
+      "_id": "req_id_topics",
+      "_type": "request",
+      "parentId": "fld_identity",
+      "name": "Health · Topics (proves shared contracts)",
+      "method": "GET",
+      "url": "http://localhost:3001/health/topics",
+      "body": {},
+      "headers": [],
+      "metaSortKey": 102
+    },
+    {
+      "_id": "req_id_register_customer",
+      "_type": "request",
+      "parentId": "fld_identity",
+      "name": "Register · Customer",
+      "description": "Creates a user (MySQL) + outbox event; relay publishes user.registered ~1s later.",
+      "method": "POST",
+      "url": "http://localhost:3001/auth/register",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"ada@example.com\",\n  \"phone\": \"+2348012345678\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "metaSortKey": 103
+    },
+    {
+      "_id": "req_id_register_rider",
+      "_type": "request",
+      "parentId": "fld_identity",
+      "name": "Register · Rider",
+      "method": "POST",
+      "url": "http://localhost:3001/auth/register",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"rider@example.com\",\n  \"actorType\": \"rider\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "metaSortKey": 104
+    },
+    {
+      "_id": "req_id_register_invalid",
+      "_type": "request",
+      "parentId": "fld_identity",
+      "name": "Register · Invalid email (expect 400)",
+      "method": "POST",
+      "url": "http://localhost:3001/auth/register",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"not-an-email\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "metaSortKey": 105
+    },
+    {
+      "_id": "req_id_register_dup",
+      "_type": "request",
+      "parentId": "fld_identity",
+      "name": "Register · Duplicate email (run twice → 409)",
+      "description": "Send once to create, again to see the DB unique-constraint 409.",
+      "method": "POST",
+      "url": "http://localhost:3001/auth/register",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"dupe@example.com\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "metaSortKey": 106
+    },
+    {
+      "_id": "req_id_published",
+      "_type": "request",
+      "parentId": "fld_identity",
+      "name": "Published events (Mode A / no-Kafka only)",
+      "description": "Only meaningful when the service runs WITHOUT KAFKA_ENABLED. With Kafka, view the topic in the Redpanda console at http://localhost:8080.",
+      "method": "GET",
+      "url": "http://localhost:3001/auth/_published",
+      "body": {},
+      "headers": [],
+      "metaSortKey": 107
+    },
+    {
+      "_id": "fld_notifications",
+      "_type": "request_group",
+      "parentId": "wrk_chowdeck",
+      "name": "notifications  (:3002)",
+      "description": "Listens for user.registered → sends welcome (idempotent).",
+      "metaSortKey": 200
+    },
+    {
+      "_id": "req_nt_health",
+      "_type": "request",
+      "parentId": "fld_notifications",
+      "name": "Health",
+      "method": "GET",
+      "url": "http://localhost:3002/health",
+      "body": {},
+      "headers": [],
+      "metaSortKey": 201
+    },
+    {
+      "_id": "req_nt_sent",
+      "_type": "request",
+      "parentId": "fld_notifications",
+      "name": "Sent welcomes",
+      "method": "GET",
+      "url": "http://localhost:3002/notifications/_sent",
+      "body": {},
+      "headers": [],
+      "metaSortKey": 202
+    },
+    {
+      "_id": "req_nt_simulate",
+      "_type": "request",
+      "parentId": "fld_notifications",
+      "name": "Simulate welcome (dev, no Kafka needed)",
+      "description": "Pushes a fabricated user.registered through the real handler.",
+      "method": "POST",
+      "url": "http://localhost:3002/notifications/_simulate",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"chidi@example.com\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "metaSortKey": 203
+    },
+    {
+      "_id": "req_nt_simulate_idem",
+      "_type": "request",
+      "parentId": "fld_notifications",
+      "name": "Simulate · Idempotency (run twice, same eventId)",
+      "description": "Send twice: first adds a welcome, second is skipped (sentCount unchanged).",
+      "method": "POST",
+      "url": "http://localhost:3002/notifications/_simulate",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"chidi@example.com\",\n  \"eventId\": \"evt-1\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "metaSortKey": 204
+    }
+  ]
+}
