@@ -20,6 +20,7 @@ Chowdeck's real stack: Node.js, MySQL, Redis, AWS/GCP).
 | D5 | **Redpanda as local Kafka** | Kafka-API compatible, single binary, light on the laptop |
 | D6 | **Async-first (Kafka events) + sync gRPC/REST via gateway** | Loose coupling; saga orchestration for the order flow |
 | D7 | **Drizzle ORM + mysql2** (not Prisma) | Prisma downloads engine binaries from `binaries.prisma.sh`, which is blocked in this environment; Drizzle is pure-TS, codegen-free, fully typed, and works offline — a solid production choice for microservices |
+| D8 | **gRPC for internal service-to-service; REST/JSON only at the public edge (gateway)** | Realizes D6. Internal calls (first: order→catalog at checkout) use gRPC — one typed `.proto` contract, HTTP/2, batching; external clients keep simple REST through the gateway. Runtime proto-loader (`@grpc/proto-loader`), no codegen step; protos live in `libs/contracts/proto/` |
 
 ---
 

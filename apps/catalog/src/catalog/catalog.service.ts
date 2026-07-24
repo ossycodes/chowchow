@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { DbService } from "../db/db.service";
 import { menuItems, vendors } from "../db/schema";
 import type { CreateVendorRequest } from "./dto/create-vendor.request";
@@ -92,6 +92,18 @@ export class CatalogService {
       .select()
       .from(menuItems)
       .where(eq(menuItems.vendorId, vendorId));
+  }
+
+  /**
+   * Batch-fetch items by id (used by the internal gRPC API at order checkout). Unknown ids
+   * are simply absent from the result — the caller decides how to treat missing lines.
+   */
+  async getItemsByIds(ids: string[]): Promise<MenuItemRecord[]> {
+    if (ids.length === 0) return [];
+    return this.dbService.db
+      .select()
+      .from(menuItems)
+      .where(inArray(menuItems.id, ids));
   }
 
   async getItemOrThrow(id: string): Promise<MenuItemRecord> {

@@ -1,0 +1,34 @@
+// gRPC contract for the catalog service's INTERNAL API (service-to-service only).
+// External clients still use the REST endpoints via the gateway; this proto is how other
+// services (first: order, at checkout) ask catalog for authoritative item data.
+//
+// proto3 is the current Protobuf syntax. Field numbers (= 1, = 2, ...) are the wire
+// identity of each field — never reuse or renumber them once shipped; that's how Protobuf
+// stays backward/forward compatible as the schema evolves.
+syntax = "proto3";
+
+package chowdeck.catalog.v1;
+
+// The service = the set of remote procedures callers can invoke. Each `rpc` is one method
+// with a single request message and a single response message.
+service Catalog {
+  // Fetch many items at once by id. Batching keeps checkout to ONE round-trip even when
+  // the cart has several lines. Unknown ids are simply omitted from the response.
+  rpc GetItems(GetItemsRequest) returns (GetItemsResponse);
+}
+
+message GetItemsRequest {
+  repeated string ids = 1; // `repeated` = a list.
+}
+
+message CatalogItem {
+  string id = 1;
+  string vendor_id = 2;
+  string name = 3;
+  int64 price_kobo = 4; // money in kobo (integer minor units), never floats.
+  bool is_available = 5;
+}
+
+message GetItemsResponse {
+  repeated CatalogItem items = 1;
+}
