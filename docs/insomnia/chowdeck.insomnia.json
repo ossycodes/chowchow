@@ -234,6 +234,126 @@
       },
       "headers": [{ "name": "Content-Type", "value": "application/json" }],
       "metaSortKey": 203
+    },
+    {
+      "_id": "fld_catalog",
+      "_type": "request_group",
+      "parentId": "wrk_chowdeck",
+      "name": "catalog  (via :3000 gateway)",
+      "description": "Vendors + menu items. Browsing (GET) is public; writes (POST/PATCH) need a Bearer token — log in via the gateway first and paste the accessToken.",
+      "metaSortKey": 150
+    },
+    {
+      "_id": "req_cat_list_vendors",
+      "_type": "request",
+      "parentId": "fld_catalog",
+      "name": "Browse vendors (public, no token)",
+      "method": "GET",
+      "url": "http://localhost:3000/catalog/vendors",
+      "body": {},
+      "headers": [],
+      "metaSortKey": 150
+    },
+    {
+      "_id": "req_cat_create_vendor",
+      "_type": "request",
+      "parentId": "fld_catalog",
+      "name": "Create vendor (paste accessToken) → copy vendor.id",
+      "description": "Requires a Bearer token. Without it → 401. Returns { vendor } with an auto-generated slug; copy vendor.id into the item requests.",
+      "method": "POST",
+      "url": "http://localhost:3000/catalog/vendors",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Mama Put Kitchen\",\n  \"description\": \"Best jollof in Lagos\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }
+      ],
+      "metaSortKey": 151
+    },
+    {
+      "_id": "req_cat_create_vendor_noauth",
+      "_type": "request",
+      "parentId": "fld_catalog",
+      "name": "Create vendor · no token (expect 401)",
+      "method": "POST",
+      "url": "http://localhost:3000/catalog/vendors",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Should Fail\"\n}"
+      },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "metaSortKey": 152
+    },
+    {
+      "_id": "req_cat_get_vendor",
+      "_type": "request",
+      "parentId": "fld_catalog",
+      "name": "Get vendor (public — paste vendorId)",
+      "method": "GET",
+      "url": "http://localhost:3000/catalog/vendors/PASTE_VENDOR_ID",
+      "body": {},
+      "headers": [],
+      "metaSortKey": 153
+    },
+    {
+      "_id": "req_cat_add_item",
+      "_type": "request",
+      "parentId": "fld_catalog",
+      "name": "Add menu item (paste token + vendorId) → copy item.id",
+      "description": "Price is in kobo (₦2,500 = 250000). Returns { item }; copy item.id for the GET/PATCH item requests.",
+      "method": "POST",
+      "url": "http://localhost:3000/catalog/vendors/PASTE_VENDOR_ID/items",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Jollof Rice + Chicken\",\n  \"priceKobo\": 250000\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }
+      ],
+      "metaSortKey": 154
+    },
+    {
+      "_id": "req_cat_list_items",
+      "_type": "request",
+      "parentId": "fld_catalog",
+      "name": "Browse vendor menu (public — paste vendorId)",
+      "method": "GET",
+      "url": "http://localhost:3000/catalog/vendors/PASTE_VENDOR_ID/items",
+      "body": {},
+      "headers": [],
+      "metaSortKey": 155
+    },
+    {
+      "_id": "req_cat_get_item",
+      "_type": "request",
+      "parentId": "fld_catalog",
+      "name": "Get item (public — paste itemId)",
+      "method": "GET",
+      "url": "http://localhost:3000/catalog/items/PASTE_ITEM_ID",
+      "body": {},
+      "headers": [],
+      "metaSortKey": 156
+    },
+    {
+      "_id": "req_cat_patch_item",
+      "_type": "request",
+      "parentId": "fld_catalog",
+      "name": "Update item · mark sold out (paste token + itemId)",
+      "description": "Partial update — send any subset of name/description/priceKobo/isAvailable. Empty body → 400. Needs a token.",
+      "method": "PATCH",
+      "url": "http://localhost:3000/catalog/items/PASTE_ITEM_ID",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"isAvailable\": false\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }
+      ],
+      "metaSortKey": 157
     }
   ]
 }

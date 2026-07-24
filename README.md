@@ -36,6 +36,7 @@ folder-by-folder.
 apps/            one NestJS app per microservice (independently deployable)
   api-gateway/     single public front door — JWT auth, routing/proxy, rate limit, CORS
   identity/        auth (register/login/refresh, JWT + bcrypt), accounts in MySQL (Drizzle)
+  catalog/         vendors + menu items (browse public, writes authed), MySQL (Drizzle)
   notifications/   listens for user.registered → sends welcome (idempotent consumer)
 libs/
   contracts/       shared event schemas + DTOs (the ONLY cross-service coupling)
@@ -113,8 +114,11 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
       `customer` (privilege fix); input whitelisting.
 - [x] **API gateway + auth:** `identity` login/refresh (JWT access+refresh, bcrypt
       passwords); `api-gateway` single front door — verifies JWT, routes/proxies to
-      services, injects `x-user-id` (anti-spoofing), rate limit, CORS, helmet. *(current)*
-- [ ] Phase 1 — catalog + ordering
+      services, injects `x-user-id` (anti-spoofing), rate limit, CORS, helmet.
+- [x] **Catalog service:** `catalog` owns vendors + menu items in its own MySQL DB
+      (Drizzle); prices in kobo; browsing (GET) is public, writes (POST/PATCH) are
+      gateway-authed by HTTP method. *(current)*
+- [ ] Phase 1 — ordering (checkout, order lifecycle)
 - [ ] Phase 2 — dispatch + realtime
 - [ ] Phase 3 — money hardening (ledger, settlements)
 - [ ] Phase 4 — ops & scale (Kubernetes)
