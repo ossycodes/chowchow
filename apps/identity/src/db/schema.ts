@@ -13,6 +13,7 @@ export const users = mysqlTable("users", {
   actorType: varchar("actor_type", { length: 20 }).notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   phone: varchar("phone", { length: 32 }),
+  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

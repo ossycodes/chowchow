@@ -8,6 +8,7 @@ import { z } from "zod";
  */
 export const registerRequestSchema = z.object({
   email: z.string().email().max(255),
+  password: z.string().min(8).max(100),
   phone: z
     .string()
     .regex(/^\+?[0-9]{7,15}$/, "phone must be 7–15 digits, optional leading +")
