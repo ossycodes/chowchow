@@ -117,8 +117,11 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
       services, injects `x-user-id` (anti-spoofing), rate limit, CORS, helmet.
 - [x] **Catalog service:** `catalog` owns vendors + menu items in its own MySQL DB
       (Drizzle); prices in kobo; browsing (GET) is public, writes (POST/PATCH) are
-      gateway-authed by HTTP method. *(current)*
-- [ ] Phase 1 — ordering (checkout, order lifecycle)
+      gateway-authed by HTTP method.
+- [x] **Internal gRPC:** shared `.proto` in `libs/contracts/proto/`; `catalog` runs a
+      hybrid app (REST + gRPC) exposing `Catalog.GetItems` for service-to-service price
+      lookups. External edge stays REST; internal mesh is gRPC (decision D8). *(current)*
+- [ ] Phase 1 — ordering (checkout via gRPC price lookup, order lifecycle)
 - [ ] Phase 2 — dispatch + realtime
 - [ ] Phase 3 — money hardening (ledger, settlements)
 - [ ] Phase 4 — ops & scale (Kubernetes)
