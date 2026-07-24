@@ -18,5 +18,6 @@ little jargon as possible. If the code is the "how", these are the "what and why
 8. [Show me and stop — dump & die debugging](08-dump-and-die-debugging.md)
 9. [The Menu Board — catalog: vendors & menu items](09-the-catalog-menus-and-vendors.md)
 10. [Services Phoning Each Other — gRPC internal calls](10-services-talking-directly-grpc.md)
+11. [The Checkout — orders, pricing & the lifecycle](11-checkout-and-the-order-lifecycle.md)
 
 _(More added as we build. See the roadmap in [../ARCHITECTURE.md](../ARCHITECTURE.md).)_

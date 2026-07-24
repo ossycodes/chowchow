@@ -31,6 +31,7 @@ export class GatewayMiddleware implements NestMiddleware {
     const notificationsUrl =
       process.env.NOTIFICATIONS_URL ?? "http://localhost:3002";
     const catalogUrl = process.env.CATALOG_URL ?? "http://localhost:3003";
+    const orderUrl = process.env.ORDER_URL ?? "http://localhost:3004";
 
     const onError = (err: Error, _req: unknown, res: unknown) => {
       this.logger.error(`proxy error: ${err.message}`);
@@ -59,6 +60,11 @@ export class GatewayMiddleware implements NestMiddleware {
       changeOrigin: true,
       on: { error: onError },
     });
+    const orderProxy = createProxyMiddleware({
+      target: orderUrl,
+      changeOrigin: true,
+      on: { error: onError },
+    });
 
     const publicAuthPaths = new Set([
       "/auth/register",
@@ -84,6 +90,8 @@ export class GatewayMiddleware implements NestMiddleware {
         proxy: catalogProxy,
         isPublic: (_p, method) => method === "GET",
       },
+      // Orders are always tied to a user — every method requires auth.
+      { prefix: "/orders", proxy: orderProxy, isPublic: () => false },
     ];
   }
 
