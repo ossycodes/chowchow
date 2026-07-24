@@ -1,6 +1,6 @@
 # ChowChow
 
-A production-shaped, from-scratch build of a an on-demand food/grocery
+A production-shaped, from-scratch build of an on-demand food/grocery
 delivery platform — a three-sided, real-time logistics marketplace (customers, vendors,
 riders).
 
@@ -34,7 +34,8 @@ folder-by-folder.
 
 ```
 apps/            one NestJS app per microservice (independently deployable)
-  identity/        auth, accounts — persists users to MySQL (Drizzle), emits user.registered
+  api-gateway/     single public front door — JWT auth, routing/proxy, rate limit, CORS
+  identity/        auth (register/login/refresh, JWT + bcrypt), accounts in MySQL (Drizzle)
   notifications/   listens for user.registered → sends welcome (idempotent consumer)
 libs/
   contracts/       shared event schemas + DTOs (the ONLY cross-service coupling)
@@ -109,7 +110,10 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
       written in one transaction; drizzle-kit migrations; unique-email → 409.
 - [x] **Validation hardening:** shared `@chowdeck/nest` (Zod validation pipe + fail-fast
       env config); request DTOs with DB-aligned bounds; public register forced to
-      `customer` (privilege fix); input whitelisting. *(current)*
+      `customer` (privilege fix); input whitelisting.
+- [x] **API gateway + auth:** `identity` login/refresh (JWT access+refresh, bcrypt
+      passwords); `api-gateway` single front door — verifies JWT, routes/proxies to
+      services, injects `x-user-id` (anti-spoofing), rate limit, CORS, helmet. *(current)*
 - [ ] Phase 1 — catalog + ordering
 - [ ] Phase 2 — dispatch + realtime
 - [ ] Phase 3 — money hardening (ledger, settlements)
