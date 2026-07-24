@@ -9,8 +9,8 @@ import jwt, { type JwtPayload } from "jsonwebtoken";
 interface RouteRule {
   prefix: string;
   proxy: RequestHandler;
-  /** Which exact paths under this prefix skip auth (login/register/etc). */
-  isPublic: (path: string) => boolean;
+  /** Whether this request (path + HTTP method) skips auth (login, public browsing, etc). */
+  isPublic: (path: string, method: string) => boolean;
 }
 
 /**
@@ -30,6 +30,7 @@ export class GatewayMiddleware implements NestMiddleware {
     const identityUrl = process.env.IDENTITY_URL ?? "http://localhost:3001";
     const notificationsUrl =
       process.env.NOTIFICATIONS_URL ?? "http://localhost:3002";
+    const catalogUrl = process.env.CATALOG_URL ?? "http://localhost:3003";
 
     const onError = (err: Error, _req: unknown, res: unknown) => {
       this.logger.error(`proxy error: ${err.message}`);
@@ -53,6 +54,11 @@ export class GatewayMiddleware implements NestMiddleware {
       changeOrigin: true,
       on: { error: onError },
     });
+    const catalogProxy = createProxyMiddleware({
+      target: catalogUrl,
+      changeOrigin: true,
+      on: { error: onError },
+    });
 
     const publicAuthPaths = new Set([
       "/auth/register",
@@ -71,6 +77,12 @@ export class GatewayMiddleware implements NestMiddleware {
         prefix: "/notifications",
         proxy: notificationsProxy,
         isPublic: () => false,
+      },
+      {
+        // Browsing the catalog (GET) is public; creating/updating (POST/PATCH) needs auth.
+        prefix: "/catalog",
+        proxy: catalogProxy,
+        isPublic: (_p, method) => method === "GET",
       },
     ];
   }
@@ -95,7 +107,7 @@ export class GatewayMiddleware implements NestMiddleware {
     delete req.headers["x-user-id"];
     delete req.headers["x-actor-type"];
 
-    if (!route.isPublic(path)) {
+    if (!route.isPublic(path, req.method)) {
       const token = this.extractToken(req);
       if (!token) return this.unauthorized(res, "missing bearer token");
       try {

@@ -16,5 +16,6 @@ little jargon as possible. If the code is the "how", these are the "what and why
 6. [Guarding the Doors — input validation & fail-fast config](06-guarding-the-doors-validation.md)
 7. [The Front Door — API gateway, JWT auth & passwords](07-the-front-door-api-gateway.md)
 8. [Show me and stop — dump & die debugging](08-dump-and-die-debugging.md)
+9. [The Menu Board — catalog: vendors & menu items](09-the-catalog-menus-and-vendors.md)
 
 _(More added as we build. See the roadmap in [../ARCHITECTURE.md](../ARCHITECTURE.md).)_
