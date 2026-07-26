@@ -37,6 +37,7 @@ export class GatewayMiddleware implements NestMiddleware {
     const orderUrl = process.env.ORDER_URL ?? "http://localhost:3004";
     const dispatchUrl = process.env.DISPATCH_URL ?? "http://localhost:3005";
     const paymentsUrl = process.env.PAYMENTS_URL ?? "http://localhost:3006";
+    const ledgerUrl = process.env.LEDGER_URL ?? "http://localhost:3007";
 
     const onError = (err: Error, _req: unknown, res: unknown) => {
       this.logger.error(`proxy error: ${err.message}`);
@@ -80,6 +81,11 @@ export class GatewayMiddleware implements NestMiddleware {
       changeOrigin: true,
       on: { error: onError },
     });
+    const ledgerProxy = createProxyMiddleware({
+      target: ledgerUrl,
+      changeOrigin: true,
+      on: { error: onError },
+    });
     // Socket.IO (realtime tracking) lives on dispatch. This proxy handles both the HTTP
     // handshake (/socket.io polling) and the WebSocket upgrade. Auth is done by dispatch on
     // the handshake token, so the gateway just forwards — keeping the single front door.
@@ -120,6 +126,8 @@ export class GatewayMiddleware implements NestMiddleware {
       { prefix: "/dispatch", proxy: dispatchProxy, isPublic: () => false },
       // Payments — read-only view of your charges; always authed.
       { prefix: "/payments", proxy: paymentsProxy, isPublic: () => false },
+      // Ledger — finance/ops reporting (double-entry balances + journals); always authed.
+      { prefix: "/ledger", proxy: ledgerProxy, isPublic: () => false },
       // Socket.IO handshake (polling) → dispatch. The socket authenticates itself via the
       // handshake token, so this HTTP leg is public at the gateway.
       { prefix: "/socket.io", proxy: this.socketProxy, isPublic: () => true },

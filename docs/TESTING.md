@@ -19,6 +19,7 @@ How to run **everything** locally and test every flow end-to-end: auth, catalog,
 | order | 3004 | checkout (gRPC price lookup) + order lifecycle |
 | dispatch | 3005 | rider assignment (Kafka) + realtime tracking (Socket.IO) |
 | payments | 3006 | charges on order.created → payment.succeeded (order → PAID) |
+| ledger | 3007 | double-entry bookkeeping — books payment.succeeded |
 | notifications | 3002 | welcome-on-registration consumer |
 
 Infra (Docker): **MySQL** 3306, **Redis** 6379, **Redpanda/Kafka** 9092, **Kafka console**
@@ -46,6 +47,7 @@ pnpm --filter @chowdeck/catalog  db:migrate
 pnpm --filter @chowdeck/order    db:migrate
 pnpm --filter @chowdeck/dispatch db:migrate
 pnpm --filter @chowdeck/payments db:migrate
+pnpm --filter @chowdeck/ledger   db:migrate
 
 pnpm build                      # build all packages (Turbo, dependency-ordered)
 ```
@@ -67,9 +69,10 @@ node apps/catalog/dist/main.js
 KAFKA_ENABLED=true node apps/order/dist/main.js
 # 5) dispatch — KAFKA ON
 KAFKA_ENABLED=true node apps/dispatch/dist/main.js
-# 6) payments — KAFKA ON
+# 6) payments — KAFKA ON        7) ledger — KAFKA ON
 KAFKA_ENABLED=true node apps/payments/dist/main.js
-# 7) notifications (optional)
+KAFKA_ENABLED=true node apps/ledger/dist/main.js
+# 8) notifications (optional)
 KAFKA_ENABLED=true node apps/notifications/dist/main.js
 ```
 
@@ -129,8 +132,17 @@ curl -s $G/orders/$OID -H "Authorization: Bearer $TOKEN" \
 curl -s $G/payments/order/$OID -H "Authorization: Bearer $TOKEN"   # SUCCEEDED, amountKobo, providerRef
 ```
 
+And the **ledger** books that payment as a balanced double-entry journal:
+
+```bash
+curl -s "$G/ledger/journals?limit=50" -H "Authorization: Bearer $TOKEN"
+#   → a journal with DEBIT cash <amount> and CREDIT vendor_payable:<vendorId> <amount> (equal)
+curl -s $G/ledger/accounts -H "Authorization: Bearer $TOKEN"
+#   → cash (asset) balance = total money taken; vendor_payable:<id> = what we owe each vendor
+```
+
 Prefer a GUI? Import [`insomnia/chowdeck.insomnia.json`](insomnia/chowdeck.insomnia.json) —
-folders for gateway, catalog, orders, dispatch, payments.
+folders for gateway, catalog, orders, dispatch, payments, ledger.
 
 ---
 

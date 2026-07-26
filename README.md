@@ -42,6 +42,7 @@ apps/            one NestJS app per microservice (independently deployable)
   order/           checkout (gRPC price lookup from catalog) + order lifecycle, MySQL
   dispatch/        event-driven rider assignment + realtime tracking (Socket.IO/WebSockets)
   payments/        charges on order.created → payment.succeeded (idempotent, kobo)
+  ledger/          double-entry bookkeeping — books payment.succeeded (debit/credit)
   notifications/   listens for user.registered → sends welcome (idempotent consumer)
 libs/
   contracts/       shared event schemas + DTOs (the ONLY cross-service coupling)
@@ -141,8 +142,12 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
 - [x] **Payments:** `payments` consumes `order.created`, charges via a swappable
       `PaymentProvider` port (fake adapter now), emits `payment.succeeded` → `order`
       auto-advances `CREATED → PAID`. Never double-charges (unique `orderId` + idempotent
-      consumer); amounts in kobo. *(current)*
-- [ ] Phase 3 (cont.) — ledger (double-entry), settlements; nearest-rider matching
+      consumer); amounts in kobo.
+- [x] **Ledger:** `ledger` books each `payment.succeeded` as a balanced double-entry journal
+      (`DEBIT cash / CREDIT vendor_payable`); refuses unbalanced journals; idempotent
+      (unique `reference`). `/ledger/accounts` (balances) + `/ledger/journals`. *(current)*
+- [ ] Phase 3 (cont.) — settlements (pay out vendor_payable), commission/fee splits;
+      nearest-rider matching
 - [ ] Phase 4 — ops & scale (Kubernetes)
 
 See the roadmap in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#10-phased-roadmap).

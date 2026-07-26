@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1785064415308,
+      "tag": "0000_thankful_maverick",
+      "breakpoints": true
+    }
+  ]
+}
