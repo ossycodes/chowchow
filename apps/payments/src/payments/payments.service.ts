@@ -23,6 +23,7 @@ interface MysqlError {
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
+  private readonly commissionBps = Number(process.env.COMMISSION_BPS ?? 2000);
 
   constructor(
     private readonly dbService: DbService,
@@ -63,12 +64,21 @@ export class PaymentsService {
     });
 
     if (result.success) {
+      // Split the charge: platform commission + what the vendor is owed. Integer kobo, so
+      // the two always sum back to the exact amount (no rounding leak).
+      const commissionKobo = Math.floor(
+        (order.totalKobo * this.commissionBps) / 10000,
+      );
+      const vendorAmountKobo = order.totalKobo - commissionKobo;
+
       const payload: PaymentSucceeded = {
         paymentId,
         orderId: order.orderId,
         customerId: order.customerId,
         vendorId: order.vendorId,
         amountKobo: order.totalKobo,
+        commissionKobo,
+        vendorAmountKobo,
         providerRef: result.providerRef,
       };
       const event = wrapEvent<PaymentSucceeded>(
@@ -82,6 +92,8 @@ export class PaymentsService {
           .set({
             status: PaymentStatus.Succeeded,
             providerRef: result.providerRef,
+            commissionKobo,
+            vendorAmountKobo,
           })
           .where(eq(payments.id, paymentId));
         await tx.insert(outboxEvents).values({
@@ -91,7 +103,10 @@ export class PaymentsService {
           key: order.orderId,
         });
       });
-      this.logger.log(`charged order ${order.orderId} (${order.totalKobo} kobo)`);
+      this.logger.log(
+        `charged order ${order.orderId} (${order.totalKobo} kobo; commission ` +
+          `${commissionKobo}, vendor ${vendorAmountKobo})`,
+      );
       return;
     }
 

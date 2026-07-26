@@ -135,13 +135,14 @@ curl -s $G/orders/$OID -H "Authorization: Bearer $TOKEN" \
 curl -s $G/payments/order/$OID -H "Authorization: Bearer $TOKEN"   # SUCCEEDED, amountKobo, providerRef
 ```
 
-And the **ledger** books that payment as a balanced double-entry journal:
+And the **ledger** books that payment as a balanced journal, split by the platform
+**commission** (default 20%, `COMMISSION_BPS`):
 
 ```bash
 curl -s "$G/ledger/journals?limit=50" -H "Authorization: Bearer $TOKEN"
-#   → a journal with DEBIT cash <amount> and CREDIT vendor_payable:<vendorId> <amount> (equal)
+#   → DEBIT cash <amount> / CREDIT vendor_payable:<id> <net> / CREDIT platform_revenue <commission>
 curl -s $G/ledger/accounts -H "Authorization: Bearer $TOKEN"
-#   → cash (asset) balance = total money taken; vendor_payable:<id> = what we owe each vendor
+#   → cash = total taken; vendor_payable:<id> = owed to vendor (net); platform_revenue = commission earned
 ```
 
 **Settlements** accrue what we owe each vendor and pay them out — closing the money loop:

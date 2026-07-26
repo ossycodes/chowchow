@@ -19,6 +19,8 @@ export const Direction = { Debit: "DEBIT", Credit: "CREDIT" } as const;
 
 /** Platform's cash bucket (asset). Money received from customers lands here. */
 export const CASH = "cash";
+/** Platform's earnings from commission (revenue). */
+export const PLATFORM_REVENUE = "platform_revenue";
 /** What we owe a specific vendor (liability). */
 export const vendorPayable = (vendorId: string) => `vendor_payable:${vendorId}`;
 
@@ -50,10 +52,12 @@ export class LedgerService {
   /**
    * Record a successful payment as a balanced double-entry journal:
    *   DEBIT  cash                     (asset ↑ — platform received money)
-   *   CREDIT vendor_payable:<vendor>  (liability ↑ — platform owes the vendor)
+   *   CREDIT platform_revenue          (revenue ↑ — the platform's commission)
+   *   CREDIT vendor_payable:<vendor>  (liability ↑ — platform owes the vendor the rest)
+   * cash == commission + vendor_amount, so the journal balances.
    *
    * Idempotent: `journals.reference` (= paymentId) is unique, so a replayed
-   * `payment.succeeded` never double-books. Commission/settlement splits come later.
+   * `payment.succeeded` never double-books.
    */
   async recordPayment(payment: PaymentSucceeded): Promise<void> {
     const existing = await this.dbService.db
@@ -77,9 +81,18 @@ export class LedgerService {
       {
         accountCode: vendorPayable(payment.vendorId),
         direction: Direction.Credit,
-        amountKobo: payment.amountKobo,
+        amountKobo: payment.vendorAmountKobo,
       },
     ];
+    // Only book a commission line when there is one (keeps zero-commission clean).
+    if (payment.commissionKobo > 0) {
+      await this.ensureAccount(PLATFORM_REVENUE, AccountType.Revenue);
+      lines.push({
+        accountCode: PLATFORM_REVENUE,
+        direction: Direction.Credit,
+        amountKobo: payment.commissionKobo,
+      });
+    }
     assertBalanced(lines);
 
     const journalId = randomUUID();

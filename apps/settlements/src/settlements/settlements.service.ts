@@ -42,7 +42,8 @@ export class SettlementsService {
         id: randomUUID(),
         paymentId: payment.paymentId,
         vendorId: payment.vendorId,
-        amountKobo: payment.amountKobo,
+        // The vendor is owed their share (net of platform commission), not the gross charge.
+        amountKobo: payment.vendorAmountKobo,
       });
     } catch (err) {
       if ((err as MysqlError).code === "ER_DUP_ENTRY") {

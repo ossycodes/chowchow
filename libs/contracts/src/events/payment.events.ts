@@ -22,7 +22,12 @@ export const paymentSucceededSchema = z.object({
   orderId: z.string().uuid(),
   customerId: z.string().uuid(),
   vendorId: z.string().uuid(),
+  /** Total charged to the customer (kobo). */
   amountKobo: z.number().int().positive(),
+  /** Platform's cut of `amountKobo` (kobo). */
+  commissionKobo: z.number().int().nonnegative(),
+  /** What the vendor is owed = amountKobo − commissionKobo (kobo). */
+  vendorAmountKobo: z.number().int().positive(),
   /** Reference returned by the payment provider (idempotency / reconciliation). */
   providerRef: z.string().min(1),
 });

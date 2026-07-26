@@ -62,10 +62,26 @@ describe("PaymentsService.handleOrderCreated", () => {
 
     // payment marked SUCCEEDED
     expect(setCalls.some((s) => s.status === PaymentStatus.Succeeded)).toBe(true);
-    // outbox event is payment.succeeded with the right amount
-    const outbox = writes.outbox as { envelope: { type: string; payload: { amountKobo: number } } };
+    // outbox event is payment.succeeded with the commission split (default 20%)
+    const outbox = writes.outbox as {
+      envelope: {
+        type: string;
+        payload: {
+          amountKobo: number;
+          commissionKobo: number;
+          vendorAmountKobo: number;
+        };
+      };
+    };
     expect(outbox.envelope.type).toBe(PaymentEventType.Succeeded);
     expect(outbox.envelope.payload.amountKobo).toBe(500000);
+    expect(outbox.envelope.payload.commissionKobo).toBe(100000); // 20% of 500000
+    expect(outbox.envelope.payload.vendorAmountKobo).toBe(400000);
+    // split sums back to the exact charge — no rounding leak
+    expect(
+      outbox.envelope.payload.commissionKobo +
+        outbox.envelope.payload.vendorAmountKobo,
+    ).toBe(outbox.envelope.payload.amountKobo);
   });
 
   it("stages a payment.failed event when the provider declines", async () => {
