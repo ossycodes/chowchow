@@ -38,3 +38,15 @@ export const orderCreatedSchema = z.object({
   status: z.literal(OrderStatus.Created),
 });
 export type OrderCreated = z.infer<typeof orderCreatedSchema>;
+
+/**
+ * Emitted when the vendor has the food ready for pickup. This is dispatch's cue to find a
+ * rider. Carries just enough for dispatch to act (which order, which vendor to pick up from).
+ */
+export const orderReadySchema = z.object({
+  orderId: z.string().uuid(),
+  customerId: z.string().uuid(),
+  vendorId: z.string().uuid(),
+  status: z.literal(OrderStatus.Ready),
+});
+export type OrderReady = z.infer<typeof orderReadySchema>;
