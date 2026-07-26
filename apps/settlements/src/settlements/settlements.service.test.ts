@@ -14,6 +14,8 @@ function payment(paymentId: string, amountKobo: number): PaymentSucceeded {
     customerId: "cccccccc-cccc-cccc-cccc-cccccccccccc",
     vendorId: VENDOR,
     amountKobo,
+    commissionKobo: 0,
+    vendorAmountKobo: amountKobo,
     providerRef: "ref",
   };
 }

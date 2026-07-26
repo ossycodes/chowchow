@@ -150,9 +150,13 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
 - [x] **Settlements:** `settlements` accrues a per-payment earning (idempotent by
       `paymentId`), pays out each vendor's unsettled total on `/settlements/run`, and emits
       `settlement.completed` → `ledger` books `DEBIT vendor_payable / CREDIT cash`, netting the
-      vendor to zero. Full money loop closed & balanced. *(current)*
-- [ ] Phase 3 (cont.) — commission/fee splits (vendor + platform + rider), payout scheduler,
-      real transfer provider; nearest-rider matching
+      vendor to zero. Full money loop closed & balanced.
+- [x] **Commission split:** `payments` takes a platform commission (`COMMISSION_BPS`, default
+      20%) and publishes the breakdown; `ledger` books a balanced 3-way split
+      (`cash` / `vendor_payable` / `platform_revenue`); `settlements` pays vendors the **net**.
+      *(current)*
+- [ ] Phase 3 (cont.) — rider delivery fee (4th split), payout scheduler, real transfer
+      provider; nearest-rider matching
 - [ ] Phase 4 — ops & scale (Kubernetes)
 
 See the roadmap in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#10-phased-roadmap).
