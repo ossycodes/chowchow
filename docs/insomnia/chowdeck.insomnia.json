@@ -547,6 +547,37 @@
       "body": {},
       "headers": [{ "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }],
       "metaSortKey": 211
+    },
+    {
+      "_id": "fld_ledger",
+      "_type": "request_group",
+      "parentId": "wrk_chowdeck",
+      "name": "ledger  (via :3000 gateway)",
+      "description": "Double-entry bookkeeping (finance/ops). Books each payment.succeeded as DEBIT cash / CREDIT vendor_payable. Needs ledger running with KAFKA_ENABLED=true.",
+      "metaSortKey": 220
+    },
+    {
+      "_id": "req_led_accounts",
+      "_type": "request",
+      "parentId": "fld_ledger",
+      "name": "Accounts + balances",
+      "description": "Each account with debit/credit totals and net balance (debit − credit). cash = money taken; vendor_payable:<id> = owed to that vendor.",
+      "method": "GET",
+      "url": "http://localhost:3000/ledger/accounts",
+      "body": {},
+      "headers": [{ "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }],
+      "metaSortKey": 220
+    },
+    {
+      "_id": "req_led_journals",
+      "_type": "request",
+      "parentId": "fld_ledger",
+      "name": "Journals (balanced debit/credit lines)",
+      "method": "GET",
+      "url": "http://localhost:3000/ledger/journals?limit=50",
+      "body": {},
+      "headers": [{ "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }],
+      "metaSortKey": 221
     }
   ]
 }

@@ -10,6 +10,7 @@ export const envSchema = z.object({
   ORDER_URL: z.string().url().default("http://localhost:3004"),
   DISPATCH_URL: z.string().url().default("http://localhost:3005"),
   PAYMENTS_URL: z.string().url().default("http://localhost:3006"),
+  LEDGER_URL: z.string().url().default("http://localhost:3007"),
   // Comma-separated list of allowed origins, or "*" for any.
   CORS_ORIGIN: z.string().default("*"),
 });
