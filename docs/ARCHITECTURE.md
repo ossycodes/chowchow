@@ -21,6 +21,7 @@ Chowdeck's real stack: Node.js, MySQL, Redis, AWS/GCP).
 | D6 | **Async-first (Kafka events) + sync gRPC/REST via gateway** | Loose coupling; saga orchestration for the order flow |
 | D7 | **Drizzle ORM + mysql2** (not Prisma) | Prisma downloads engine binaries from `binaries.prisma.sh`, which is blocked in this environment; Drizzle is pure-TS, codegen-free, fully typed, and works offline — a solid production choice for microservices |
 | D8 | **gRPC for internal service-to-service; REST/JSON only at the public edge (gateway)** | Realizes D6. Internal calls (first: order→catalog at checkout) use gRPC — one typed `.proto` contract, HTTP/2, batching; external clients keep simple REST through the gateway. Runtime proto-loader (`@grpc/proto-loader`), no codegen step; protos live in `libs/contracts/proto/` |
+| D9 | **Realtime over Socket.IO (WebSockets), proxied through the gateway; auth on the handshake** | Live tracking needs a persistent connection, not polling. Socket.IO lives on `dispatch`; the gateway proxies the WS upgrade so the single-front-door rule (D8) still holds. The JWT rides on the handshake and dispatch verifies it; per-order rooms with ownership checks isolate customers. In-process assignment→push is decoupled via a Nest EventEmitter |
 
 ---
 

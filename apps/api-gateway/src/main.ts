@@ -40,6 +40,10 @@ async function bootstrap() {
   const gateway = app.get(GatewayMiddleware);
   app.use(gateway.use.bind(gateway));
 
+  // Proxy WebSocket upgrades (Socket.IO realtime tracking) to dispatch, so realtime enters
+  // through the same front door as HTTP.
+  app.getHttpServer().on("upgrade", gateway.upgrade.bind(gateway));
+
   app.enableShutdownHooks();
 
   await app.listen(env.GATEWAY_PORT);

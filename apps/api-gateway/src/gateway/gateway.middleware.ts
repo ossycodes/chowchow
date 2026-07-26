@@ -1,4 +1,6 @@
 import { Injectable, Logger, type NestMiddleware } from "@nestjs/common";
+import type { IncomingMessage } from "node:http";
+import type { Socket } from "node:net";
 import type { NextFunction, Request, Response } from "express";
 import {
   createProxyMiddleware,
@@ -24,6 +26,7 @@ interface RouteRule {
 export class GatewayMiddleware implements NestMiddleware {
   private readonly logger = new Logger("Gateway");
   private readonly routes: RouteRule[];
+  private readonly socketProxy: RequestHandler;
   private readonly accessSecret = process.env.JWT_ACCESS_SECRET as string;
 
   constructor() {
@@ -71,6 +74,15 @@ export class GatewayMiddleware implements NestMiddleware {
       changeOrigin: true,
       on: { error: onError },
     });
+    // Socket.IO (realtime tracking) lives on dispatch. This proxy handles both the HTTP
+    // handshake (/socket.io polling) and the WebSocket upgrade. Auth is done by dispatch on
+    // the handshake token, so the gateway just forwards — keeping the single front door.
+    this.socketProxy = createProxyMiddleware({
+      target: dispatchUrl,
+      changeOrigin: true,
+      ws: true,
+      on: { error: onError },
+    });
 
     const publicAuthPaths = new Set([
       "/auth/register",
@@ -100,6 +112,9 @@ export class GatewayMiddleware implements NestMiddleware {
       { prefix: "/orders", proxy: orderProxy, isPublic: () => false },
       // Dispatch (rider fleet + assignments) — internal/ops, always authed.
       { prefix: "/dispatch", proxy: dispatchProxy, isPublic: () => false },
+      // Socket.IO handshake (polling) → dispatch. The socket authenticates itself via the
+      // handshake token, so this HTTP leg is public at the gateway.
+      { prefix: "/socket.io", proxy: this.socketProxy, isPublic: () => true },
     ];
   }
 
@@ -141,6 +156,18 @@ export class GatewayMiddleware implements NestMiddleware {
     }
 
     route.proxy(req, res, next);
+  }
+
+  /**
+   * Handle a raw WebSocket upgrade (wired to the http server's 'upgrade' event in main.ts).
+   * Only Socket.IO paths are proxied to dispatch; anything else is closed.
+   */
+  upgrade(req: IncomingMessage, socket: Socket, head: Buffer): void {
+    if (req.url?.startsWith("/socket.io")) {
+      this.socketProxy.upgrade?.(req, socket, head);
+    } else {
+      socket.destroy();
+    }
   }
 
   private extractToken(req: Request): string | null {

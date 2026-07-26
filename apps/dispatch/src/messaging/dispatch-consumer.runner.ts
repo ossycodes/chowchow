@@ -44,7 +44,11 @@ export class DispatchConsumerRunner
   private async handle(event: EventEnvelope): Promise<void> {
     if (event.type !== OrderEventType.Ready) return; // ignore other order events
     const ready = event.payload as OrderReady;
-    await this.dispatch.assignForOrder(ready.orderId, ready.vendorId);
+    await this.dispatch.assignForOrder(
+      ready.orderId,
+      ready.vendorId,
+      ready.customerId,
+    );
   }
 
   async onApplicationBootstrap(): Promise<void> {

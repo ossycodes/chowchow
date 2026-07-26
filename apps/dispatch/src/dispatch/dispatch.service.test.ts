@@ -9,6 +9,10 @@ import { assignments, outboxEvents, riders } from "../db/schema";
 
 const ORDER = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const VENDOR = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+const CUSTOMER = "cccccccc-cccc-cccc-cccc-cccccccccccc";
+
+/** Minimal EventEmitter2 stub — we only assert DB writes here. */
+const events = { emit: () => true } as never;
 
 function tableName(t: unknown): string {
   if (t === assignments) return "assignments";
@@ -76,9 +80,9 @@ describe("DispatchService.assignForOrder", () => {
       existing: [],
       rider: [{ id: "rider-1", status: RiderStatus.Online }],
     });
-    const svc = new DispatchService({ db } as never);
+    const svc = new DispatchService({ db } as never, events);
 
-    await svc.assignForOrder(ORDER, VENDOR);
+    await svc.assignForOrder(ORDER, VENDOR, CUSTOMER);
 
     const assignment = inserted.assignments as {
       status: string;
@@ -94,9 +98,9 @@ describe("DispatchService.assignForOrder", () => {
 
   it("records a PENDING assignment and emits nothing when no rider is online", async () => {
     const { db, inserted } = mockDb({ existing: [], rider: [] });
-    const svc = new DispatchService({ db } as never);
+    const svc = new DispatchService({ db } as never, events);
 
-    await svc.assignForOrder(ORDER, VENDOR);
+    await svc.assignForOrder(ORDER, VENDOR, CUSTOMER);
 
     const assignment = inserted.assignments as {
       status: string;
@@ -112,9 +116,9 @@ describe("DispatchService.assignForOrder", () => {
       existing: [{ id: "existing", orderId: ORDER }],
       rider: [{ id: "rider-1" }],
     });
-    const svc = new DispatchService({ db } as never);
+    const svc = new DispatchService({ db } as never, events);
 
-    await svc.assignForOrder(ORDER, VENDOR);
+    await svc.assignForOrder(ORDER, VENDOR, CUSTOMER);
 
     // nothing new written
     expect(inserted.assignments).toBeUndefined();
