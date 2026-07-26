@@ -7,6 +7,7 @@ export const envSchema = z.object({
   IDENTITY_URL: z.string().url().default("http://localhost:3001"),
   NOTIFICATIONS_URL: z.string().url().default("http://localhost:3002"),
   CATALOG_URL: z.string().url().default("http://localhost:3003"),
+  ORDER_URL: z.string().url().default("http://localhost:3004"),
   // Comma-separated list of allowed origins, or "*" for any.
   CORS_ORIGIN: z.string().default("*"),
 });

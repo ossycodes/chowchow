@@ -354,6 +354,103 @@
         { "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }
       ],
       "metaSortKey": 157
+    },
+    {
+      "_id": "fld_orders",
+      "_type": "request_group",
+      "parentId": "wrk_chowdeck",
+      "name": "orders  (via :3000 gateway)",
+      "description": "Checkout + order lifecycle. All routes require a Bearer token. The client sends item ids + quantities only — the order service fetches real prices from catalog over gRPC. Create a vendor + item in the catalog folder first.",
+      "metaSortKey": 175
+    },
+    {
+      "_id": "req_ord_checkout",
+      "_type": "request",
+      "parentId": "fld_orders",
+      "name": "Checkout (paste token, vendorId, itemId) → copy order.id",
+      "description": "No prices in the body — only ids + quantities. Response includes totalKobo computed server-side from catalog's live price.",
+      "method": "POST",
+      "url": "http://localhost:3000/orders",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"vendorId\": \"PASTE_VENDOR_ID\",\n  \"items\": [\n    { \"itemId\": \"PASTE_ITEM_ID\", \"quantity\": 2 }\n  ]\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }
+      ],
+      "metaSortKey": 175
+    },
+    {
+      "_id": "req_ord_checkout_noauth",
+      "_type": "request",
+      "parentId": "fld_orders",
+      "name": "Checkout · no token (expect 401)",
+      "method": "POST",
+      "url": "http://localhost:3000/orders",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"vendorId\": \"PASTE_VENDOR_ID\",\n  \"items\": [ { \"itemId\": \"PASTE_ITEM_ID\", \"quantity\": 1 } ]\n}"
+      },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "metaSortKey": 176
+    },
+    {
+      "_id": "req_ord_list",
+      "_type": "request",
+      "parentId": "fld_orders",
+      "name": "My orders (paste token)",
+      "method": "GET",
+      "url": "http://localhost:3000/orders",
+      "body": {},
+      "headers": [{ "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }],
+      "metaSortKey": 177
+    },
+    {
+      "_id": "req_ord_get",
+      "_type": "request",
+      "parentId": "fld_orders",
+      "name": "Get order + items (paste token + orderId)",
+      "method": "GET",
+      "url": "http://localhost:3000/orders/PASTE_ORDER_ID",
+      "body": {},
+      "headers": [{ "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }],
+      "metaSortKey": 178
+    },
+    {
+      "_id": "req_ord_transition_ok",
+      "_type": "request",
+      "parentId": "fld_orders",
+      "name": "Transition CREATED → PAID (legal)",
+      "description": "Advances the order status. Legal moves only; see the state machine in order-status.ts.",
+      "method": "POST",
+      "url": "http://localhost:3000/orders/PASTE_ORDER_ID/transition",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"PAID\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }
+      ],
+      "metaSortKey": 179
+    },
+    {
+      "_id": "req_ord_transition_illegal",
+      "_type": "request",
+      "parentId": "fld_orders",
+      "name": "Transition → DELIVERED (illegal jump, expect 409)",
+      "method": "POST",
+      "url": "http://localhost:3000/orders/PASTE_ORDER_ID/transition",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"DELIVERED\"\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }
+      ],
+      "metaSortKey": 180
     }
   ]
 }

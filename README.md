@@ -37,6 +37,7 @@ apps/            one NestJS app per microservice (independently deployable)
   api-gateway/     single public front door — JWT auth, routing/proxy, rate limit, CORS
   identity/        auth (register/login/refresh, JWT + bcrypt), accounts in MySQL (Drizzle)
   catalog/         vendors + menu items (browse public, writes authed), MySQL (Drizzle)
+  order/           checkout (gRPC price lookup from catalog) + order lifecycle, MySQL
   notifications/   listens for user.registered → sends welcome (idempotent consumer)
 libs/
   contracts/       shared event schemas + DTOs (the ONLY cross-service coupling)
@@ -120,9 +121,12 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
       gateway-authed by HTTP method.
 - [x] **Internal gRPC:** shared `.proto` in `libs/contracts/proto/`; `catalog` runs a
       hybrid app (REST + gRPC) exposing `Catalog.GetItems` for service-to-service price
-      lookups. External edge stays REST; internal mesh is gRPC (decision D8). *(current)*
-- [ ] Phase 1 — ordering (checkout via gRPC price lookup, order lifecycle)
-- [ ] Phase 2 — dispatch + realtime
+      lookups. External edge stays REST; internal mesh is gRPC (decision D8).
+- [x] **Ordering service:** `order` checkout fetches live prices from `catalog` over gRPC
+      (client can't set price), snapshots them, computes totals in kobo, and persists the
+      order + items + `order.created` outbox event in one transaction; guarded order-status
+      state machine; per-customer ownership. *(current)*
+- [ ] Phase 2 — dispatch + realtime (rider assignment, live tracking)
 - [ ] Phase 3 — money hardening (ledger, settlements)
 - [ ] Phase 4 — ops & scale (Kubernetes)
 
