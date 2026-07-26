@@ -9,8 +9,10 @@ Kafka event backbone, sync via gRPC/REST through an API gateway. See
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full reference, the decisions log,
 and the phased roadmap.
 
-**Want to run & test it yourself?** Follow the **[Runbook](docs/RUNBOOK.md)** — step by step,
-with expected outputs and the Kafka + MySQL dashboards.
+**Want to run & test it yourself?** Follow the **[Full Testing Guide](docs/TESTING.md)** —
+run the whole stack and test every flow (auth, catalog, checkout, the Kafka dispatch loop,
+and realtime WebSocket tracking), with expected outputs and the Kafka + MySQL dashboards.
+(The Phase-0 [Runbook](docs/RUNBOOK.md) covers just identity + notifications.)
 
 **New here?** Read the plain-language [ELI5 docs](docs/eli5/README.md) — every feature is
 explained with everyday analogies before you dive into the code. New to **NestJS**? The

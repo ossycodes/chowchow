@@ -5,6 +5,10 @@ in the **Kafka** and **MySQL** dashboards. Copy-paste friendly, with expected ou
 
 > New to the concepts? Read [`eli5/`](eli5/README.md) first. New to NestJS/the code?
 > See [`CODEBASE_WALKTHROUGH.md`](CODEBASE_WALKTHROUGH.md).
+>
+> **This runbook covers the Phase-0 slice (identity + notifications).** For the full current
+> stack — catalog, order (gRPC), the Kafka dispatch loop, and realtime WebSocket tracking —
+> use the [**Full Testing Guide**](TESTING.md).
 
 ---
 

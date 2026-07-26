@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:integration": "RUN_INTEGRATION=1 vitest run src/messaging/dispatch-loop.integration.test.ts",
+    "smoke:track": "node scripts/track-smoke.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
