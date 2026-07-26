@@ -19,7 +19,7 @@ explained with everyday analogies before you dive into the code. New to **NestJS
 [Codebase Walkthrough](docs/CODEBASE_WALKTHROUGH.md) explains NestJS and tours every file
 folder-by-folder.
 
-**Dashboards** (after `pnpm infra:up`): Kafka → <http://localhost:8080> · MySQL → <http://localhost:8081>
+**Dashboards** (after `pnpm infra:up`): Kafka → <http://localhost:8080> · MySQL → <http://localhost:8081> · Redis → <http://localhost:8082>
 
 ## Stack
 
@@ -50,7 +50,7 @@ libs/
   kafka/           producer + outbox pattern + relay (framework-agnostic)
   nest/            shared NestJS utils: Zod validation pipe + fail-fast env config
 infra/
-  docker-compose.yml   mysql, redis, redpanda (kafka), redpanda-console
+  docker-compose.yml   mysql, redis, redpanda (kafka) + dashboards (adminer, redpanda-console, redisinsight)
   mysql/init/          per-service database bootstrap
 docs/
   RUNBOOK.md               step-by-step: run & test everything + dashboards
@@ -154,6 +154,9 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
 - [x] **Commission split:** `payments` takes a platform commission (`COMMISSION_BPS`, default
       20%) and publishes the breakdown; `ledger` books a balanced 3-way split
       (`cash` / `vendor_payable` / `platform_revenue`); `settlements` pays vendors the **net**.
+- [x] **Durable idempotency:** `libs/kafka` `RedisProcessedEventStore` — consumer dedupe state
+      lives in **Redis** (survives restarts, shared across instances) when `REDIS_URL` is set,
+      else in-memory. Wired into all consumer services; RedisInsight dashboard on :8082.
       *(current)*
 - [ ] Phase 3 (cont.) — rider delivery fee (4th split), payout scheduler, real transfer
       provider; nearest-rider matching

@@ -220,6 +220,12 @@ ownership-checked room subscribe, and rider→customer location fan-out.
 - **MySQL** → <http://localhost:8081> (server `mysql`, user `root`, pass `root`) — inspect
   `chowdeck_order.orders`, `chowdeck_dispatch.assignments` / `riders`, and each service's
   `outbox_events` (`sent_at` stamped once the relay publishes).
+- **Redis** → <http://localhost:8082> (RedisInsight) — add a database `host=redis, port=6379`
+  to browse the consumer dedupe keys (`processed:*`, each with a ~7-day TTL).
+
+> **macOS gotcha:** if you have a Homebrew Redis running, it shadows the container on
+> `localhost:6379` (IPv4 wins), so services write there instead of the container and
+> RedisInsight looks empty. Run `brew services stop redis` for a single, consistent Redis.
 
 ---
 

@@ -1,7 +1,7 @@
 import { Global, Module } from "@nestjs/common";
 import {
   InMemoryBus,
-  InMemoryProcessedEventStore,
+  processedEventStoreFromEnv,
   InMemoryProducer,
   KafkaJsConsumer,
   KafkaJsProducer,
@@ -72,7 +72,7 @@ import { SettlementsConsumerRunner } from "./settlements-consumer.runner";
     },
     {
       provide: PROCESSED_STORE,
-      useFactory: (): ProcessedEventStore => new InMemoryProcessedEventStore(),
+      useFactory: (): ProcessedEventStore => processedEventStoreFromEnv(),
     },
     RelayRunner,
     SettlementsConsumerRunner,
