@@ -43,6 +43,7 @@ apps/            one NestJS app per microservice (independently deployable)
   dispatch/        event-driven rider assignment + realtime tracking (Socket.IO/WebSockets)
   payments/        charges on order.created → payment.succeeded (idempotent, kobo)
   ledger/          double-entry bookkeeping — books payment.succeeded (debit/credit)
+  settlements/     accrues vendor earnings → pays out → settlement.completed
   notifications/   listens for user.registered → sends welcome (idempotent consumer)
 libs/
   contracts/       shared event schemas + DTOs (the ONLY cross-service coupling)
@@ -145,9 +146,13 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
       consumer); amounts in kobo.
 - [x] **Ledger:** `ledger` books each `payment.succeeded` as a balanced double-entry journal
       (`DEBIT cash / CREDIT vendor_payable`); refuses unbalanced journals; idempotent
-      (unique `reference`). `/ledger/accounts` (balances) + `/ledger/journals`. *(current)*
-- [ ] Phase 3 (cont.) — settlements (pay out vendor_payable), commission/fee splits;
-      nearest-rider matching
+      (unique `reference`). `/ledger/accounts` (balances) + `/ledger/journals`.
+- [x] **Settlements:** `settlements` accrues a per-payment earning (idempotent by
+      `paymentId`), pays out each vendor's unsettled total on `/settlements/run`, and emits
+      `settlement.completed` → `ledger` books `DEBIT vendor_payable / CREDIT cash`, netting the
+      vendor to zero. Full money loop closed & balanced. *(current)*
+- [ ] Phase 3 (cont.) — commission/fee splits (vendor + platform + rider), payout scheduler,
+      real transfer provider; nearest-rider matching
 - [ ] Phase 4 — ops & scale (Kubernetes)
 
 See the roadmap in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#10-phased-roadmap).

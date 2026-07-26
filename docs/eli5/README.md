@@ -24,5 +24,6 @@ little jargon as possible. If the code is the "how", these are the "what and why
 14. [Watching the Bike Move — live tracking with WebSockets](14-live-tracking-with-websockets.md)
 15. [Taking the Money — payments](15-taking-payment-on-an-order.md)
 16. [Keeping the Books — double-entry ledger](16-the-books-double-entry-ledger.md)
+17. [Paying the Vendors — settlements](17-paying-vendors-settlements.md)
 
 _(More added as we build. See the roadmap in [../ARCHITECTURE.md](../ARCHITECTURE.md).)_

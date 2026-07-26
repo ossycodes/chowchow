@@ -578,6 +578,48 @@
       "body": {},
       "headers": [{ "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }],
       "metaSortKey": 221
+    },
+    {
+      "_id": "fld_settlements",
+      "_type": "request_group",
+      "parentId": "wrk_chowdeck",
+      "name": "settlements  (via :3000 gateway)",
+      "description": "Vendor payouts. Earnings accrue automatically per payment.succeeded (idempotent). A run pays out every vendor with a positive balance; the ledger then books DEBIT vendor_payable / CREDIT cash. Needs settlements running with KAFKA_ENABLED=true.",
+      "metaSortKey": 230
+    },
+    {
+      "_id": "req_set_balances",
+      "_type": "request",
+      "parentId": "fld_settlements",
+      "name": "Balances owed per vendor (unsettled)",
+      "method": "GET",
+      "url": "http://localhost:3000/settlements/balances",
+      "body": {},
+      "headers": [{ "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }],
+      "metaSortKey": 230
+    },
+    {
+      "_id": "req_set_run",
+      "_type": "request",
+      "parentId": "fld_settlements",
+      "name": "Run payout (settle all vendors)",
+      "description": "Pays out every vendor with unsettled earnings. Returns the settlements created; emits settlement.completed for each.",
+      "method": "POST",
+      "url": "http://localhost:3000/settlements/run",
+      "body": {},
+      "headers": [{ "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }],
+      "metaSortKey": 231
+    },
+    {
+      "_id": "req_set_list",
+      "_type": "request",
+      "parentId": "fld_settlements",
+      "name": "List settlements (payout records)",
+      "method": "GET",
+      "url": "http://localhost:3000/settlements",
+      "body": {},
+      "headers": [{ "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }],
+      "metaSortKey": 232
     }
   ]
 }
