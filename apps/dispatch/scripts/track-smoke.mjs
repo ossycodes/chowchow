@@ -67,8 +67,19 @@ const { order } = await post(
 );
 console.log(`✓ order created: ${order.id}`);
 
-// 4. walk it to READY → triggers the event-driven dispatch loop
-for (const status of ["PAID", "VENDOR_ACCEPTED", "PREPARING", "READY"])
+// 4a. payments charges automatically → wait for CREATED → PAID
+let paid = false;
+for (let i = 0; i < 20 && !paid; i++) {
+  await new Promise((r) => setTimeout(r, 500));
+  const o = await get(`/orders/${order.id}`, token);
+  paid = o.order.status === "PAID";
+}
+if (!paid)
+  die("order never reached PAID — is the payments service up with KAFKA_ENABLED=true?");
+console.log("✓ payments charged the order (auto → PAID)");
+
+// 4b. walk the rest of the way to READY → triggers the dispatch loop
+for (const status of ["VENDOR_ACCEPTED", "PREPARING", "READY"])
   await post(`/orders/${order.id}/transition`, { status }, token);
 console.log("✓ order walked to READY");
 

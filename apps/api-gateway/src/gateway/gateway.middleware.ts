@@ -36,6 +36,7 @@ export class GatewayMiddleware implements NestMiddleware {
     const catalogUrl = process.env.CATALOG_URL ?? "http://localhost:3003";
     const orderUrl = process.env.ORDER_URL ?? "http://localhost:3004";
     const dispatchUrl = process.env.DISPATCH_URL ?? "http://localhost:3005";
+    const paymentsUrl = process.env.PAYMENTS_URL ?? "http://localhost:3006";
 
     const onError = (err: Error, _req: unknown, res: unknown) => {
       this.logger.error(`proxy error: ${err.message}`);
@@ -71,6 +72,11 @@ export class GatewayMiddleware implements NestMiddleware {
     });
     const dispatchProxy = createProxyMiddleware({
       target: dispatchUrl,
+      changeOrigin: true,
+      on: { error: onError },
+    });
+    const paymentsProxy = createProxyMiddleware({
+      target: paymentsUrl,
       changeOrigin: true,
       on: { error: onError },
     });
@@ -112,6 +118,8 @@ export class GatewayMiddleware implements NestMiddleware {
       { prefix: "/orders", proxy: orderProxy, isPublic: () => false },
       // Dispatch (rider fleet + assignments) — internal/ops, always authed.
       { prefix: "/dispatch", proxy: dispatchProxy, isPublic: () => false },
+      // Payments — read-only view of your charges; always authed.
+      { prefix: "/payments", proxy: paymentsProxy, isPublic: () => false },
       // Socket.IO handshake (polling) → dispatch. The socket authenticates itself via the
       // handshake token, so this HTTP leg is public at the gateway.
       { prefix: "/socket.io", proxy: this.socketProxy, isPublic: () => true },

@@ -18,6 +18,7 @@ How to run **everything** locally and test every flow end-to-end: auth, catalog,
 | catalog | 3003 (HTTP) · **50051 (gRPC)** | vendors + menu items; internal price API |
 | order | 3004 | checkout (gRPC price lookup) + order lifecycle |
 | dispatch | 3005 | rider assignment (Kafka) + realtime tracking (Socket.IO) |
+| payments | 3006 | charges on order.created → payment.succeeded (order → PAID) |
 | notifications | 3002 | welcome-on-registration consumer |
 
 Infra (Docker): **MySQL** 3306, **Redis** 6379, **Redpanda/Kafka** 9092, **Kafka console**
@@ -44,6 +45,7 @@ pnpm --filter @chowdeck/identity db:migrate
 pnpm --filter @chowdeck/catalog  db:migrate
 pnpm --filter @chowdeck/order    db:migrate
 pnpm --filter @chowdeck/dispatch db:migrate
+pnpm --filter @chowdeck/payments db:migrate
 
 pnpm build                      # build all packages (Turbo, dependency-ordered)
 ```
@@ -65,7 +67,9 @@ node apps/catalog/dist/main.js
 KAFKA_ENABLED=true node apps/order/dist/main.js
 # 5) dispatch — KAFKA ON
 KAFKA_ENABLED=true node apps/dispatch/dist/main.js
-# 6) notifications (optional)
+# 6) payments — KAFKA ON
+KAFKA_ENABLED=true node apps/payments/dist/main.js
+# 7) notifications (optional)
 KAFKA_ENABLED=true node apps/notifications/dist/main.js
 ```
 
@@ -113,8 +117,20 @@ OID=$(curl -s -X POST $G/orders -H "Authorization: Bearer $TOKEN" \
 curl -s $G/orders/$OID -H "Authorization: Bearer $TOKEN"     # totalKobo = 500000 (2×250000)
 ```
 
+**Payment is automatic** (event-driven): a moment after checkout, `payments` charges the
+order and the order advances **itself** to `PAID` — no manual step.
+
+```bash
+sleep 3
+curl -s $G/orders/$OID -H "Authorization: Bearer $TOKEN" \
+  | python3 -c 'import sys,json;print("order:",json.load(sys.stdin)["order"]["status"])'
+#   → order: PAID
+
+curl -s $G/payments/order/$OID -H "Authorization: Bearer $TOKEN"   # SUCCEEDED, amountKobo, providerRef
+```
+
 Prefer a GUI? Import [`insomnia/chowdeck.insomnia.json`](insomnia/chowdeck.insomnia.json) —
-folders for gateway, catalog, orders, dispatch.
+folders for gateway, catalog, orders, dispatch, payments.
 
 ---
 
@@ -125,8 +141,9 @@ folders for gateway, catalog, orders, dispatch.
 curl -s -X POST $G/dispatch/riders -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' -d '{"name":"Emeka","lat":6.5244,"lng":3.3792}'
 
-# walk the order to READY — this emits order.ready
-for S in PAID VENDOR_ACCEPTED PREPARING READY; do
+# the order is already PAID (payments did it). Walk it the rest of the way to READY,
+# which emits order.ready:
+for S in VENDOR_ACCEPTED PREPARING READY; do
   curl -s -X POST $G/orders/$OID/transition -H "Authorization: Bearer $TOKEN" \
     -H 'Content-Type: application/json' -d "{\"status\":\"$S\"}" >/dev/null
 done

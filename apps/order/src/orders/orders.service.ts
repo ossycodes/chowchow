@@ -197,6 +197,27 @@ export class OrdersService {
   }
 
   /**
+   * System-driven CREATED → PAID, applied when payments confirms a charge (consumer of
+   * payment.succeeded). No customer scoping; idempotent; illegal moves ignored.
+   */
+  async applyPaymentSucceeded(orderId: string): Promise<boolean> {
+    const [order] = await this.dbService.db
+      .select()
+      .from(orders)
+      .where(eq(orders.id, orderId))
+      .limit(1);
+    if (!order) return false;
+    const from = order.status as OrderStatus;
+    if (from === OrderStatus.Paid) return true; // already applied
+    if (!canTransition(from, OrderStatus.Paid)) return false;
+    await this.dbService.db
+      .update(orders)
+      .set({ status: OrderStatus.Paid })
+      .where(eq(orders.id, orderId));
+    return true;
+  }
+
+  /**
    * System-driven transition used by the dispatch.rider_assigned consumer (no customer
    * scoping — this is the platform acting, not a user). Idempotent: if the order is already
    * past READY, it's a no-op. Illegal moves are ignored (logged by the caller).
