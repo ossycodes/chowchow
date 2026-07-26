@@ -9,6 +9,7 @@ export const Topics = {
   Order: "order",
   Dispatch: "dispatch",
   Payment: "payment",
+  Settlement: "settlement",
   Ledger: "ledger",
   Rider: "rider",
   Notification: "notification",

@@ -20,6 +20,7 @@ How to run **everything** locally and test every flow end-to-end: auth, catalog,
 | dispatch | 3005 | rider assignment (Kafka) + realtime tracking (Socket.IO) |
 | payments | 3006 | charges on order.created → payment.succeeded (order → PAID) |
 | ledger | 3007 | double-entry bookkeeping — books payment.succeeded |
+| settlements | 3008 | accrues vendor earnings → pays out → settlement.completed |
 | notifications | 3002 | welcome-on-registration consumer |
 
 Infra (Docker): **MySQL** 3306, **Redis** 6379, **Redpanda/Kafka** 9092, **Kafka console**
@@ -48,6 +49,7 @@ pnpm --filter @chowdeck/order    db:migrate
 pnpm --filter @chowdeck/dispatch db:migrate
 pnpm --filter @chowdeck/payments db:migrate
 pnpm --filter @chowdeck/ledger   db:migrate
+pnpm --filter @chowdeck/settlements db:migrate
 
 pnpm build                      # build all packages (Turbo, dependency-ordered)
 ```
@@ -69,10 +71,11 @@ node apps/catalog/dist/main.js
 KAFKA_ENABLED=true node apps/order/dist/main.js
 # 5) dispatch — KAFKA ON
 KAFKA_ENABLED=true node apps/dispatch/dist/main.js
-# 6) payments — KAFKA ON        7) ledger — KAFKA ON
+# 6) payments   7) ledger   8) settlements  — all KAFKA ON
 KAFKA_ENABLED=true node apps/payments/dist/main.js
 KAFKA_ENABLED=true node apps/ledger/dist/main.js
-# 8) notifications (optional)
+KAFKA_ENABLED=true node apps/settlements/dist/main.js
+# 9) notifications (optional)
 KAFKA_ENABLED=true node apps/notifications/dist/main.js
 ```
 
@@ -141,8 +144,17 @@ curl -s $G/ledger/accounts -H "Authorization: Bearer $TOKEN"
 #   → cash (asset) balance = total money taken; vendor_payable:<id> = what we owe each vendor
 ```
 
+**Settlements** accrue what we owe each vendor and pay them out — closing the money loop:
+
+```bash
+curl -s $G/settlements/balances -H "Authorization: Bearer $TOKEN"    # owed per vendor (unsettled)
+curl -s -X POST $G/settlements/run -H "Authorization: Bearer $TOKEN" # pay out all vendors
+# a moment later, the ledger books DEBIT vendor_payable / CREDIT cash → that vendor's
+# vendor_payable balance nets back to 0 (payment credit − settlement debit).
+```
+
 Prefer a GUI? Import [`insomnia/chowdeck.insomnia.json`](insomnia/chowdeck.insomnia.json) —
-folders for gateway, catalog, orders, dispatch, payments, ledger.
+folders for gateway, catalog, orders, dispatch, payments, ledger, settlements.
 
 ---
 

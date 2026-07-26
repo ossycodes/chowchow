@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { Injectable, Logger } from "@nestjs/common";
 import { eq } from "drizzle-orm";
-import type { PaymentSucceeded } from "@chowdeck/contracts";
+import type {
+  PaymentSucceeded,
+  SettlementCompleted,
+} from "@chowdeck/contracts";
 import { DbService } from "../db/db.service";
 import { accounts, entryLines, journals } from "../db/schema";
 
@@ -107,6 +110,70 @@ export class LedgerService {
     this.logger.log(
       `booked payment ${payment.paymentId}: DEBIT cash ${payment.amountKobo} / ` +
         `CREDIT ${vendorPayable(payment.vendorId)} ${payment.amountKobo}`,
+    );
+  }
+
+  /**
+   * Record a settlement payout — the reverse of a payment:
+   *   DEBIT  vendor_payable:<vendor>  (liability ↓ — we owe the vendor less)
+   *   CREDIT cash                     (asset ↓ — money left the platform)
+   * After a vendor's earnings are settled, their vendor_payable nets back toward zero.
+   * Idempotent by `reference` (= settlementId).
+   */
+  async recordSettlement(settlement: SettlementCompleted): Promise<void> {
+    const existing = await this.dbService.db
+      .select({ id: journals.id })
+      .from(journals)
+      .where(eq(journals.reference, settlement.settlementId))
+      .limit(1);
+    if (existing.length > 0) {
+      this.logger.log(
+        `settlement ${settlement.settlementId} already booked — skipping`,
+      );
+      return;
+    }
+
+    await this.ensureAccount(CASH, AccountType.Asset);
+    await this.ensureAccount(
+      vendorPayable(settlement.vendorId),
+      AccountType.Liability,
+    );
+
+    const lines: DraftLine[] = [
+      {
+        accountCode: vendorPayable(settlement.vendorId),
+        direction: Direction.Debit,
+        amountKobo: settlement.amountKobo,
+      },
+      { accountCode: CASH, direction: Direction.Credit, amountKobo: settlement.amountKobo },
+    ];
+    assertBalanced(lines);
+
+    const journalId = randomUUID();
+    try {
+      await this.dbService.db.transaction(async (tx) => {
+        await tx.insert(journals).values({
+          id: journalId,
+          reference: settlement.settlementId,
+          memo: `settlement payout to vendor ${settlement.vendorId}`,
+        });
+        await tx.insert(entryLines).values(
+          lines.map((l) => ({
+            id: randomUUID(),
+            journalId,
+            accountCode: l.accountCode,
+            direction: l.direction,
+            amountKobo: l.amountKobo,
+          })),
+        );
+      });
+    } catch (err) {
+      if ((err as MysqlError).code === "ER_DUP_ENTRY") return;
+      throw err;
+    }
+    this.logger.log(
+      `booked settlement ${settlement.settlementId}: DEBIT ${vendorPayable(settlement.vendorId)} ` +
+        `${settlement.amountKobo} / CREDIT cash ${settlement.amountKobo}`,
     );
   }
 

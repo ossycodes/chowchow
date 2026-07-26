@@ -13,17 +13,21 @@ import {
 } from "@chowdeck/kafka";
 import {
   PaymentEventType,
+  SettlementEventType,
   Topics,
   type EventEnvelope,
   type PaymentSucceeded,
+  type SettlementCompleted,
 } from "@chowdeck/contracts";
 import { LedgerService } from "../ledger/ledger.service";
 import { MESSAGE_CONSUMER, PROCESSED_STORE } from "./tokens";
 
 /**
- * Subscribes the ledger to the `payment` topic and books a double-entry journal on
- * `payment.succeeded`. Wrapped with {@link idempotent} (dedupe by event id) on top of the
- * unique journal reference — a replay can never double-book.
+ * Books double-entry journals from money events:
+ *   - `payment.succeeded` (payment topic)     → DEBIT cash / CREDIT vendor_payable
+ *   - `settlement.completed` (settlement topic) → DEBIT vendor_payable / CREDIT cash
+ * Wrapped with {@link idempotent} (dedupe by event id) on top of the unique journal
+ * reference — a replay can never double-book.
  */
 @Injectable()
 export class LedgerConsumerRunner
@@ -42,8 +46,15 @@ export class LedgerConsumerRunner
   }
 
   private async handle(event: EventEnvelope): Promise<void> {
-    if (event.type !== PaymentEventType.Succeeded) return; // ignore payment.failed etc.
-    await this.ledger.recordPayment(event.payload as PaymentSucceeded);
+    switch (event.type) {
+      case PaymentEventType.Succeeded:
+        await this.ledger.recordPayment(event.payload as PaymentSucceeded);
+        break;
+      case SettlementEventType.Completed:
+        await this.ledger.recordSettlement(event.payload as SettlementCompleted);
+        break;
+      // ignore payment.failed and any other events on these topics
+    }
   }
 
   async onApplicationBootstrap(): Promise<void> {
@@ -56,8 +67,11 @@ export class LedgerConsumerRunner
     }
     await this.consumer.connect();
     await this.consumer.subscribe(Topics.Payment, this.handler);
+    await this.consumer.subscribe(Topics.Settlement, this.handler);
     await this.consumer.run();
-    this.logger.log(`consumer running — subscribed to topic "${Topics.Payment}"`);
+    this.logger.log(
+      `consumer running — subscribed to "${Topics.Payment}" + "${Topics.Settlement}"`,
+    );
   }
 
   async onApplicationShutdown(): Promise<void> {
