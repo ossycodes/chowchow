@@ -13,18 +13,20 @@ import {
 } from "@chowdeck/kafka";
 import {
   DispatchEventType,
+  PaymentEventType,
   Topics,
   type EventEnvelope,
+  type PaymentSucceeded,
   type RiderAssigned,
 } from "@chowdeck/contracts";
 import { OrdersService } from "../orders/orders.service";
 import { MESSAGE_CONSUMER, PROCESSED_STORE } from "./tokens";
 
 /**
- * Subscribes the order service to the `dispatch` topic and advances orders when a rider is
- * assigned. The handler is wrapped with {@link idempotent} so at-least-once delivery can't
- * double-apply. This is the consumer half of the async dispatch loop:
- *   order.ready → dispatch → dispatch.rider_assigned → (here) order → RIDER_ASSIGNED
+ * Subscribes the order service to events that advance an order's status from the outside:
+ *   - `payment.succeeded` (payment topic) → CREATED → PAID
+ *   - `dispatch.rider_assigned` (dispatch topic) → READY → RIDER_ASSIGNED
+ * The handler is wrapped with {@link idempotent} so at-least-once delivery can't double-apply.
  */
 @Injectable()
 export class OrderConsumerRunner
@@ -43,14 +45,29 @@ export class OrderConsumerRunner
   }
 
   private async handle(event: EventEnvelope): Promise<void> {
-    if (event.type !== DispatchEventType.RiderAssigned) return; // ignore other dispatch events
-    const { orderId, riderId } = event.payload as RiderAssigned;
-    const applied = await this.orders.applyRiderAssigned(orderId, riderId);
+    switch (event.type) {
+      case PaymentEventType.Succeeded: {
+        const { orderId } = event.payload as PaymentSucceeded;
+        const applied = await this.orders.applyPaymentSucceeded(orderId);
+        this.log(orderId, "PAID", applied);
+        break;
+      }
+      case DispatchEventType.RiderAssigned: {
+        const { orderId, riderId } = event.payload as RiderAssigned;
+        const applied = await this.orders.applyRiderAssigned(orderId, riderId);
+        this.log(orderId, `RIDER_ASSIGNED (rider ${riderId})`, applied);
+        break;
+      }
+      // ignore any other events on these topics
+    }
+  }
+
+  private log(orderId: string, to: string, applied: boolean): void {
     if (applied) {
-      this.logger.log(`order ${orderId} → RIDER_ASSIGNED (rider ${riderId})`);
+      this.logger.log(`order ${orderId} → ${to}`);
     } else {
       this.logger.warn(
-        `rider_assigned for order ${orderId} ignored (not found or illegal from current state)`,
+        `transition to ${to} for order ${orderId} ignored (not found or illegal from current state)`,
       );
     }
   }
@@ -64,9 +81,12 @@ export class OrderConsumerRunner
       return;
     }
     await this.consumer.connect();
+    await this.consumer.subscribe(Topics.Payment, this.handler);
     await this.consumer.subscribe(Topics.Dispatch, this.handler);
     await this.consumer.run();
-    this.logger.log(`consumer running — subscribed to topic "${Topics.Dispatch}"`);
+    this.logger.log(
+      `consumer running — subscribed to "${Topics.Payment}" + "${Topics.Dispatch}"`,
+    );
   }
 
   async onApplicationShutdown(): Promise<void> {

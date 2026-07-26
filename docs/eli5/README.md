@@ -22,5 +22,6 @@ little jargon as possible. If the code is the "how", these are the "what and why
 12. [How Order Calls Catalog — gRPC client, up close](12-how-order-calls-catalog-over-grpc.md)
 13. [Finding a Rider — event-driven dispatch](13-dispatch-assigning-riders-with-events.md)
 14. [Watching the Bike Move — live tracking with WebSockets](14-live-tracking-with-websockets.md)
+15. [Taking the Money — payments](15-taking-payment-on-an-order.md)
 
 _(More added as we build. See the roadmap in [../ARCHITECTURE.md](../ARCHITECTURE.md).)_

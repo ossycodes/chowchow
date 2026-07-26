@@ -516,6 +516,37 @@
       "body": {},
       "headers": [{ "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }],
       "metaSortKey": 193
+    },
+    {
+      "_id": "fld_payments",
+      "_type": "request_group",
+      "parentId": "wrk_chowdeck",
+      "name": "payments  (via :3000 gateway)",
+      "description": "Read-only view of charges. Charging is EVENT-DRIVEN: after checkout, payments charges order.created automatically and the order advances to PAID (needs payments running with KAFKA_ENABLED=true).",
+      "metaSortKey": 210
+    },
+    {
+      "_id": "req_pay_list",
+      "_type": "request",
+      "parentId": "fld_payments",
+      "name": "My payments",
+      "method": "GET",
+      "url": "http://localhost:3000/payments",
+      "body": {},
+      "headers": [{ "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }],
+      "metaSortKey": 210
+    },
+    {
+      "_id": "req_pay_by_order",
+      "_type": "request",
+      "parentId": "fld_payments",
+      "name": "Payment for an order (paste orderId) → SUCCEEDED",
+      "description": "After checkout + a moment, this shows the payment: SUCCEEDED, amountKobo, providerRef.",
+      "method": "GET",
+      "url": "http://localhost:3000/payments/order/PASTE_ORDER_ID",
+      "body": {},
+      "headers": [{ "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }],
+      "metaSortKey": 211
     }
   ]
 }
