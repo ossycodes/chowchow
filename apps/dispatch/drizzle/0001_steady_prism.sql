@@ -1,0 +1,1 @@
+ALTER TABLE `assignments` ADD `customer_id` varchar(36) NOT NULL;

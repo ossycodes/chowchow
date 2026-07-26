@@ -8,6 +8,13 @@
       "when": 1785051054834,
       "tag": "0000_typical_blazing_skull",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1785053915926,
+      "tag": "0001_steady_prism",
+      "breakpoints": true
     }
   ]
 }

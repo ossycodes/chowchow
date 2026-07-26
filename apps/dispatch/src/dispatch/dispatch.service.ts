@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Injectable, Logger, NotFoundException } from "@nestjs/common";
-import { asc, eq } from "drizzle-orm";
+import { EventEmitter2 } from "@nestjs/event-emitter";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import {
   DispatchEventType,
   Topics,
@@ -11,6 +12,14 @@ import { DbService } from "../db/db.service";
 import { assignments, outboxEvents, riders } from "../db/schema";
 import type { RegisterRiderRequest } from "./dto/register-rider.request";
 import type { UpdateRiderRequest } from "./dto/update-rider.request";
+
+/** Internal (in-process) app event: assignment committed → push to the WS room. */
+export const RIDER_ASSIGNED_LOCAL = "rider.assigned.local";
+export interface RiderAssignedLocal {
+  orderId: string;
+  riderId: string;
+  assignmentId: string;
+}
 
 export const RiderStatus = {
   Online: "ONLINE",
@@ -32,7 +41,10 @@ export type AssignmentRow = typeof assignments.$inferSelect;
 export class DispatchService {
   private readonly logger = new Logger(DispatchService.name);
 
-  constructor(private readonly dbService: DbService) {}
+  constructor(
+    private readonly dbService: DbService,
+    private readonly events: EventEmitter2,
+  ) {}
 
   // --- riders (ops/rider-app surface) ---
 
@@ -82,7 +94,11 @@ export class DispatchService {
    * PENDING assignment (so the order is visible to dispatch) but emit no event; a retry/geo
    * sweep will pick it up later.
    */
-  async assignForOrder(orderId: string, vendorId: string): Promise<void> {
+  async assignForOrder(
+    orderId: string,
+    vendorId: string,
+    customerId: string,
+  ): Promise<void> {
     const [existing] = await this.dbService.db
       .select()
       .from(assignments)
@@ -108,6 +124,7 @@ export class DispatchService {
       await this.dbService.db.insert(assignments).values({
         id: assignmentId,
         orderId,
+        customerId,
         vendorId,
         riderId: null,
         status: AssignmentStatus.Pending,
@@ -129,6 +146,7 @@ export class DispatchService {
       await tx.insert(assignments).values({
         id: assignmentId,
         orderId,
+        customerId,
         vendorId,
         riderId: rider.id,
         status: AssignmentStatus.Assigned,
@@ -146,5 +164,53 @@ export class DispatchService {
     });
 
     this.logger.log(`assigned rider ${rider.id} to order ${orderId}`);
+    // Notify the WS layer in-process (decoupled from Kafka) so the customer's live map
+    // updates immediately.
+    this.events.emit(RIDER_ASSIGNED_LOCAL, {
+      orderId,
+      riderId: rider.id,
+      assignmentId,
+    } satisfies RiderAssignedLocal);
+  }
+
+  // --- realtime support ---
+
+  /** The assignment for an order (for WS ownership checks), or null. */
+  async getAssignmentForOrder(orderId: string): Promise<AssignmentRow | null> {
+    const [row] = await this.dbService.db
+      .select()
+      .from(assignments)
+      .where(eq(assignments.orderId, orderId))
+      .limit(1);
+    return row ?? null;
+  }
+
+  /**
+   * Record a rider's latest position and return the order ids they're actively delivering
+   * (ASSIGNED/PICKED_UP) — the rooms whose customers should see this location.
+   */
+  async recordRiderLocation(
+    riderId: string,
+    lat: number,
+    lng: number,
+  ): Promise<string[]> {
+    await this.dbService.db
+      .update(riders)
+      .set({ lat, lng })
+      .where(eq(riders.id, riderId));
+
+    const active = await this.dbService.db
+      .select({ orderId: assignments.orderId })
+      .from(assignments)
+      .where(
+        and(
+          eq(assignments.riderId, riderId),
+          inArray(assignments.status, [
+            AssignmentStatus.Assigned,
+            AssignmentStatus.PickedUp,
+          ]),
+        ),
+      );
+    return active.map((a) => a.orderId);
   }
 }

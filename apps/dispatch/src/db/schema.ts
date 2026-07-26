@@ -33,6 +33,7 @@ export const assignments = mysqlTable(
   {
     id: varchar("id", { length: 36 }).primaryKey(),
     orderId: varchar("order_id", { length: 36 }).notNull().unique(),
+    customerId: varchar("customer_id", { length: 36 }).notNull(),
     vendorId: varchar("vendor_id", { length: 36 }).notNull(),
     riderId: varchar("rider_id", { length: 36 }),
     status: varchar("status", { length: 16 }).notNull(), // PENDING | ASSIGNED | PICKED_UP | DELIVERED

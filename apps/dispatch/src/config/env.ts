@@ -6,6 +6,8 @@ export const envSchema = z.object({
     .string({ required_error: "DISPATCH_DATABASE_URL is required" })
     .url("DISPATCH_DATABASE_URL must be a valid mysql:// connection string"),
   DISPATCH_HTTP_PORT: z.coerce.number().int().positive().default(3005),
+  // Same secret the gateway/identity use — dispatch verifies the JWT on the WS handshake.
+  JWT_ACCESS_SECRET: z.string().min(16),
   KAFKA_ENABLED: z.enum(["true", "false"]).default("false"),
   KAFKA_BROKERS: z.string().min(1).default("localhost:9092"),
   KAFKA_CLIENT_ID: z.string().min(1).default("chowdeck"),

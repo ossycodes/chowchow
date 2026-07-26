@@ -38,7 +38,7 @@ apps/            one NestJS app per microservice (independently deployable)
   identity/        auth (register/login/refresh, JWT + bcrypt), accounts in MySQL (Drizzle)
   catalog/         vendors + menu items (browse public, writes authed), MySQL (Drizzle)
   order/           checkout (gRPC price lookup from catalog) + order lifecycle, MySQL
-  dispatch/        event-driven rider assignment (consumes order.ready → rider.assigned)
+  dispatch/        event-driven rider assignment + realtime tracking (Socket.IO/WebSockets)
   notifications/   listens for user.registered → sends welcome (idempotent consumer)
 libs/
   contracts/       shared event schemas + DTOs (the ONLY cross-service coupling)
@@ -130,12 +130,12 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
 - [x] **Event-driven dispatch:** `order` emits `order.ready` → `dispatch` assigns an online
       rider and emits `dispatch.rider_assigned` → `order` consumes it and advances to
       `RIDER_ASSIGNED`. Full async loop over Kafka (outbox + idempotent consumers); no-rider
-      falls back to a PENDING assignment. Unit-tested state machine, checkout pricing &
-      assignment logic. *(current — realtime next)*
-- [ ] Phase 2 (cont.) — realtime: WebSocket rider location + customer live tracking,
-      nearest-rider matching
-- [ ] Phase 3 — money hardening (ledger, settlements)
-- [ ] Phase 3 — money hardening (ledger, settlements)
+      falls back to a PENDING assignment.
+- [x] **Realtime tracking:** Socket.IO WebSockets — riders stream location, customers watch
+      their order's rider live (per-order rooms, JWT-authed handshake, ownership-checked);
+      WS proxied through the gateway (one front door). Kafka-loop **integration test** added
+      (real Redpanda+MySQL). *(current — Phase 2 complete)*
+- [ ] Phase 3 — money hardening (ledger, settlements); nearest-rider matching
 - [ ] Phase 4 — ops & scale (Kubernetes)
 
 See the roadmap in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#10-phased-roadmap).
