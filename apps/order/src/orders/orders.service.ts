@@ -13,6 +13,7 @@ import {
   Topics,
   type CatalogItemMessage,
   type OrderCreated,
+  type OrderReady,
 } from "@chowdeck/contracts";
 import { wrapEvent } from "@chowdeck/kafka";
 import { DbService } from "../db/db.service";
@@ -156,10 +157,65 @@ export class OrdersService {
     if (!canTransition(from, to)) {
       throw new ConflictException(`illegal transition ${from} → ${to}`);
     }
+    await this.applyStatus(order.id, order.customerId, order.vendorId, to);
+    return this.getForCustomer(customerId, orderId);
+  }
+
+  /**
+   * Persist a status change and, for statuses other services react to, write the matching
+   * outbox event in the SAME transaction. Currently only READY fans out (→ dispatch);
+   * more transitions will emit as their consumers arrive.
+   */
+  private async applyStatus(
+    orderId: string,
+    customerId: string,
+    vendorId: string,
+    to: OrderStatus,
+  ): Promise<void> {
+    await this.dbService.db.transaction(async (tx) => {
+      await tx.update(orders).set({ status: to }).where(eq(orders.id, orderId));
+
+      if (to === OrderStatus.Ready) {
+        const payload: OrderReady = {
+          orderId,
+          customerId,
+          vendorId,
+          status: OrderStatus.Ready,
+        };
+        const event = wrapEvent<OrderReady>(OrderEventType.Ready, payload, {
+          producer: "order",
+          correlationId: orderId,
+        });
+        await tx.insert(outboxEvents).values({
+          id: event.id,
+          topic: Topics.Order,
+          envelope: event,
+          key: orderId,
+        });
+      }
+    });
+  }
+
+  /**
+   * System-driven transition used by the dispatch.rider_assigned consumer (no customer
+   * scoping — this is the platform acting, not a user). Idempotent: if the order is already
+   * past READY, it's a no-op. Illegal moves are ignored (logged by the caller).
+   */
+  async applyRiderAssigned(orderId: string, riderId: string): Promise<boolean> {
+    const [order] = await this.dbService.db
+      .select()
+      .from(orders)
+      .where(eq(orders.id, orderId))
+      .limit(1);
+    if (!order) return false;
+    const from = order.status as OrderStatus;
+    if (from === OrderStatus.RiderAssigned) return true; // already applied
+    if (!canTransition(from, OrderStatus.RiderAssigned)) return false;
     await this.dbService.db
       .update(orders)
-      .set({ status: to })
+      .set({ status: OrderStatus.RiderAssigned })
       .where(eq(orders.id, orderId));
-    return this.getForCustomer(customerId, orderId);
+    void riderId; // (persisting the rider on the order comes with the dispatch read-model)
+    return true;
   }
 }

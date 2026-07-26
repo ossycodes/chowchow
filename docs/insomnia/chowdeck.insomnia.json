@@ -451,6 +451,71 @@
         { "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }
       ],
       "metaSortKey": 180
+    },
+    {
+      "_id": "fld_dispatch",
+      "_type": "request_group",
+      "parentId": "wrk_chowdeck",
+      "name": "dispatch  (via :3000 gateway)",
+      "description": "Rider fleet + assignments. Assignment itself is EVENT-DRIVEN: walk an order to READY (orders folder) and dispatch assigns a rider automatically — needs KAFKA_ENABLED=true on the order + dispatch services. These routes manage riders and inspect assignments.",
+      "metaSortKey": 190
+    },
+    {
+      "_id": "req_disp_register_rider",
+      "_type": "request",
+      "parentId": "fld_dispatch",
+      "name": "Register rider (ONLINE by default)",
+      "description": "Register a rider so dispatch has someone to assign. Defaults to ONLINE. lat/lng optional.",
+      "method": "POST",
+      "url": "http://localhost:3000/dispatch/riders",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Emeka\",\n  \"lat\": 6.5244,\n  \"lng\": 3.3792\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }
+      ],
+      "metaSortKey": 190
+    },
+    {
+      "_id": "req_disp_list_riders",
+      "_type": "request",
+      "parentId": "fld_dispatch",
+      "name": "List riders (see who's BUSY after assignment)",
+      "method": "GET",
+      "url": "http://localhost:3000/dispatch/riders",
+      "body": {},
+      "headers": [{ "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }],
+      "metaSortKey": 191
+    },
+    {
+      "_id": "req_disp_update_rider",
+      "_type": "request",
+      "parentId": "fld_dispatch",
+      "name": "Update rider (go online/offline, ping location)",
+      "method": "PATCH",
+      "url": "http://localhost:3000/dispatch/riders/PASTE_RIDER_ID",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"ONLINE\",\n  \"lat\": 6.6,\n  \"lng\": 3.35\n}"
+      },
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }
+      ],
+      "metaSortKey": 192
+    },
+    {
+      "_id": "req_disp_list_assignments",
+      "_type": "request",
+      "parentId": "fld_dispatch",
+      "name": "List assignments (ASSIGNED after order → READY)",
+      "method": "GET",
+      "url": "http://localhost:3000/dispatch/assignments",
+      "body": {},
+      "headers": [{ "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }],
+      "metaSortKey": 193
     }
   ]
 }

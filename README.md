@@ -38,6 +38,7 @@ apps/            one NestJS app per microservice (independently deployable)
   identity/        auth (register/login/refresh, JWT + bcrypt), accounts in MySQL (Drizzle)
   catalog/         vendors + menu items (browse public, writes authed), MySQL (Drizzle)
   order/           checkout (gRPC price lookup from catalog) + order lifecycle, MySQL
+  dispatch/        event-driven rider assignment (consumes order.ready → rider.assigned)
   notifications/   listens for user.registered → sends welcome (idempotent consumer)
 libs/
   contracts/       shared event schemas + DTOs (the ONLY cross-service coupling)
@@ -125,8 +126,15 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
 - [x] **Ordering service:** `order` checkout fetches live prices from `catalog` over gRPC
       (client can't set price), snapshots them, computes totals in kobo, and persists the
       order + items + `order.created` outbox event in one transaction; guarded order-status
-      state machine; per-customer ownership. *(current)*
-- [ ] Phase 2 — dispatch + realtime (rider assignment, live tracking)
+      state machine; per-customer ownership.
+- [x] **Event-driven dispatch:** `order` emits `order.ready` → `dispatch` assigns an online
+      rider and emits `dispatch.rider_assigned` → `order` consumes it and advances to
+      `RIDER_ASSIGNED`. Full async loop over Kafka (outbox + idempotent consumers); no-rider
+      falls back to a PENDING assignment. Unit-tested state machine, checkout pricing &
+      assignment logic. *(current — realtime next)*
+- [ ] Phase 2 (cont.) — realtime: WebSocket rider location + customer live tracking,
+      nearest-rider matching
+- [ ] Phase 3 — money hardening (ledger, settlements)
 - [ ] Phase 3 — money hardening (ledger, settlements)
 - [ ] Phase 4 — ops & scale (Kubernetes)
 
