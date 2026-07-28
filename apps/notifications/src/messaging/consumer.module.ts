@@ -1,7 +1,7 @@
 import { Global, Module } from "@nestjs/common";
 import {
   InMemoryBus,
-  InMemoryProcessedEventStore,
+  processedEventStoreFromEnv,
   KafkaJsConsumer,
   type MessageConsumer,
   type ProcessedEventStore,
@@ -35,7 +35,7 @@ import { MESSAGE_CONSUMER, PROCESSED_STORE } from "./tokens";
     },
     {
       provide: PROCESSED_STORE,
-      useFactory: (): ProcessedEventStore => new InMemoryProcessedEventStore(),
+      useFactory: (): ProcessedEventStore => processedEventStoreFromEnv(),
     },
     NotificationsService,
     ConsumerRunner,

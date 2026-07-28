@@ -25,7 +25,10 @@ services:
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "6379:6379"
+      # Host 6380 to avoid clashing with a local (e.g. Homebrew) Redis on 6379.
+      # Set REDIS_URL=redis://localhost:6380. In-container port stays 6379, so other
+      # containers (RedisInsight) still reach it as redis:6379.
+      - "6380:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -83,7 +86,19 @@ services:
     ports:
       - "8081:8080"   # MySQL dashboard → http://localhost:8081
 
+  redis-insight:
+    image: redis/redisinsight:latest
+    container_name: chowdeck-redis-insight
+    restart: unless-stopped
+    depends_on:
+      - redis
+    ports:
+      - "8082:5540"   # Redis dashboard → http://localhost:8082
+    volumes:
+      - redisinsight-data:/data
+
 volumes:
+  redisinsight-data:
   mysql-data:
   redis-data:
   redpanda-data:

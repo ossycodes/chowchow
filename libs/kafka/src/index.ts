@@ -5,4 +5,5 @@ export * from "./outbox";
 export * from "./consumer";
 export * from "./kafkajs-consumer";
 export * from "./idempotency";
+export * from "./redis-idempotency";
 export * from "./in-memory-bus";

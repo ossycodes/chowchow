@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import {
   InMemoryBus,
-  InMemoryProcessedEventStore,
+  processedEventStoreFromEnv,
   KafkaJsConsumer,
   type MessageConsumer,
   type ProcessedEventStore,
@@ -35,7 +35,7 @@ import { OrdersService } from "./orders.service";
     },
     {
       provide: PROCESSED_STORE,
-      useFactory: (): ProcessedEventStore => new InMemoryProcessedEventStore(),
+      useFactory: (): ProcessedEventStore => processedEventStoreFromEnv(),
     },
     OrderConsumerRunner,
   ],

@@ -220,6 +220,13 @@ ownership-checked room subscribe, and rider→customer location fan-out.
 - **MySQL** → <http://localhost:8081> (server `mysql`, user `root`, pass `root`) — inspect
   `chowdeck_order.orders`, `chowdeck_dispatch.assignments` / `riders`, and each service's
   `outbox_events` (`sent_at` stamped once the relay publishes).
+- **Redis** → <http://localhost:8082> (RedisInsight) — click **Add Redis database**, host
+  `redis`, port `6379` (RedisInsight reaches the container over the docker network). Browse the
+  consumer dedupe keys (`processed:*`, each with a ~7-day TTL).
+
+> **Port note:** the Redis container is published on host **6380** (not 6379) so it won't clash
+> with a local/Homebrew Redis you may already run on 6379 — hence `REDIS_URL=redis://localhost:6380`.
+> Inside docker the container is still `redis:6379`, which is why RedisInsight uses port 6379.
 
 ---
 
