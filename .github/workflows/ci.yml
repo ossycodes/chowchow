@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Cancel superseded runs on the same ref (e.g. rapid pushes to a PR).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: build · typecheck · unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4 # reads packageManager (pnpm@9.15.0) from package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+      - run: pnpm typecheck
+      - run: pnpm test # integration tests self-skip (RUN_INTEGRATION unset)
+
+  integration:
+    name: kafka integration (Redpanda + MySQL)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Reuse the project's own infra definition; --wait blocks on the healthchecks.
+      - name: Start infra (MySQL + Redpanda)
+        run: docker compose -f infra/docker-compose.yml up -d --wait mysql redpanda
+
+      # The MySQL healthcheck can pass before the init SQL finishes creating the per-service
+      # databases, so wait for the specific DB the migration needs.
+      - name: Wait for chowdeck_dispatch database
+        run: |
+          for i in $(seq 1 30); do
+            if docker exec chowdeck-mysql mysql -uroot -proot -e "USE chowdeck_dispatch" 2>/dev/null; then
+              echo "chowdeck_dispatch is ready"; exit 0
+            fi
+            echo "waiting for chowdeck_dispatch ($i)…"; sleep 2
+          done
+          echo "database never became ready"; exit 1
+
+      - run: pnpm build
+
+      - name: Migrate dispatch DB
+        run: pnpm --filter @chowdeck/dispatch db:migrate
+
+      - name: Run Kafka-loop integration test
+        env:
+          DISPATCH_DATABASE_URL: mysql://root:root@localhost:3306/chowdeck_dispatch
+          KAFKA_BROKERS: localhost:9092
+        run: pnpm --filter @chowdeck/dispatch test:integration
+
+      - name: Dump infra logs on failure
+        if: failure()
+        run: docker compose -f infra/docker-compose.yml logs --tail=100 mysql redpanda

@@ -1,5 +1,7 @@
 # ChowChow
 
+[![CI](https://github.com/ossycodes/chowchow/actions/workflows/ci.yml/badge.svg)](https://github.com/ossycodes/chowchow/actions/workflows/ci.yml)
+
 A production-shaped, from-scratch build of an on-demand food/grocery
 delivery platform — a three-sided, real-time logistics marketplace (customers, vendors,
 riders).
@@ -160,7 +162,9 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
       *(current)*
 - [x] **Nearest-rider matching:** vendors get a pickup `lat/lng`; `dispatch` fetches it from
       `catalog` over gRPC (`GetVendor`) and assigns the **closest** online rider by haversine
-      distance, falling back to least-recently-used when coords are missing. *(current)*
+      distance, falling back to least-recently-used when coords are missing.
+- [x] **CI:** GitHub Actions on every PR — `build` + `typecheck` + unit tests, plus a
+      Kafka-loop **integration** job (Redpanda + MySQL via the compose file). *(current)*
 - [ ] Phase 3 (cont.) — rider delivery fee (4th split), payout scheduler, real transfer
       provider; road-distance/ETA matching
 - [ ] Phase 4 — ops & scale (Kubernetes)
