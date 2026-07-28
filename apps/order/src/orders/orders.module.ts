@@ -35,7 +35,7 @@ import { OrdersService } from "./orders.service";
     },
     {
       provide: PROCESSED_STORE,
-      useFactory: (): ProcessedEventStore => processedEventStoreFromEnv(),
+      useFactory: (): ProcessedEventStore => processedEventStoreFromEnv("order"),
     },
     OrderConsumerRunner,
   ],

@@ -76,10 +76,19 @@ export class RedisProcessedEventStore implements ProcessedEventStore {
 /**
  * Pick the {@link ProcessedEventStore} from the environment: Redis when `REDIS_URL` is set
  * (durable, shared across instances), otherwise the in-memory store (local dev/tests).
+ *
+ * `namespace` MUST be unique per consumer (use the Kafka consumer group id). The dedupe keys
+ * are `processed:<namespace>:<eventId>`, so an event consumed by SEVERAL services (e.g.
+ * `payment.succeeded` → order, ledger, settlements) is deduped per-consumer, not globally —
+ * otherwise whichever service handled it first would make the others skip it.
  */
-export function processedEventStoreFromEnv(): ProcessedEventStore {
+export function processedEventStoreFromEnv(
+  namespace: string,
+): ProcessedEventStore {
   const url = process.env.REDIS_URL;
   return url
-    ? RedisProcessedEventStore.fromUrl(url)
+    ? RedisProcessedEventStore.fromUrl(url, {
+        keyPrefix: `processed:${namespace}:`,
+      })
     : new InMemoryProcessedEventStore();
 }

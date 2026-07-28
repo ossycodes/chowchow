@@ -28,8 +28,14 @@ memory:
 Marking an id as handled and checking if it's new is **one atomic Redis command**:
 
 ```text
-  SET processed:<eventId> 1  EX <7 days>  NX
+  SET processed:<consumer>:<eventId> 1  EX <7 days>  NX
 ```
+
+The key is namespaced by **which consumer** it belongs to (its Kafka group, e.g.
+`processed:order:...` vs `processed:ledger:...`). That matters because one event —
+`payment.succeeded` — is consumed by *several* services (order, ledger, settlements). Without
+the namespace they'd share one key, so whichever handled it first would make the others skip
+it. With it, each consumer dedupes **its own** copy.
 
 - `NX` = "only set it if it doesn't already exist."
 - The reply tells us whether *we* were the one who set it: **"OK" → new** (go handle the

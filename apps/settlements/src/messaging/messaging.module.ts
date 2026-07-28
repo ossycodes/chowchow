@@ -72,7 +72,7 @@ import { SettlementsConsumerRunner } from "./settlements-consumer.runner";
     },
     {
       provide: PROCESSED_STORE,
-      useFactory: (): ProcessedEventStore => processedEventStoreFromEnv(),
+      useFactory: (): ProcessedEventStore => processedEventStoreFromEnv("settlements"),
     },
     RelayRunner,
     SettlementsConsumerRunner,

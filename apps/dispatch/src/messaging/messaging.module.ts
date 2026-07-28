@@ -72,7 +72,7 @@ import { DispatchConsumerRunner } from "./dispatch-consumer.runner";
     },
     {
       provide: PROCESSED_STORE,
-      useFactory: (): ProcessedEventStore => processedEventStoreFromEnv(),
+      useFactory: (): ProcessedEventStore => processedEventStoreFromEnv("dispatch"),
     },
     RelayRunner,
     DispatchConsumerRunner,
