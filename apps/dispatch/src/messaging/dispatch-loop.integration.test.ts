@@ -80,7 +80,9 @@ describe.skipIf(!process.env.RUN_INTEGRATION)(
       const vendorId = randomUUID();
       const customerId = randomUUID();
 
-      const svc = new DispatchService(db, new EventEmitter2());
+      const svc = new DispatchService(db, new EventEmitter2(), {
+        getVendorLocation: async () => null, // fallback selection; geo not under test here
+      });
       await svc.assignForOrder(orderId, vendorId, customerId);
 
       // real DB: an assignment row was written with a rider

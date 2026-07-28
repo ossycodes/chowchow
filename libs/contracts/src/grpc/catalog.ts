@@ -45,3 +45,16 @@ export interface GetItemsRequest {
 export interface GetItemsResponse {
   items: CatalogItemMessage[];
 }
+
+export interface GetVendorRequest {
+  id: string;
+}
+
+export interface VendorMessage {
+  id: string; // empty when the vendor was not found
+  name: string;
+  isOpen: boolean;
+  hasLocation: boolean;
+  lat: number;
+  lng: number;
+}

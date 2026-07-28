@@ -158,8 +158,11 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
       lives in **Redis** (survives restarts, shared across instances) when `REDIS_URL` is set,
       else in-memory. Wired into all consumer services; RedisInsight dashboard on :8082.
       *(current)*
+- [x] **Nearest-rider matching:** vendors get a pickup `lat/lng`; `dispatch` fetches it from
+      `catalog` over gRPC (`GetVendor`) and assigns the **closest** online rider by haversine
+      distance, falling back to least-recently-used when coords are missing. *(current)*
 - [ ] Phase 3 (cont.) — rider delivery fee (4th split), payout scheduler, real transfer
-      provider; nearest-rider matching
+      provider; road-distance/ETA matching
 - [ ] Phase 4 — ops & scale (Kubernetes)
 
 See the roadmap in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#10-phased-roadmap).

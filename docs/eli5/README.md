@@ -27,5 +27,6 @@ little jargon as possible. If the code is the "how", these are the "what and why
 17. [Paying the Vendors — settlements](17-paying-vendors-settlements.md)
 18. [Taking a Cut — commission splits](18-taking-a-cut-commission-splits.md)
 19. [Remembering Across Restarts — Redis idempotency](19-remembering-across-restarts-redis.md)
+20. [Finding the Closest Rider — geo matching](20-finding-the-closest-rider-geo.md)
 
 _(More added as we build. See the roadmap in [../ARCHITECTURE.md](../ARCHITECTURE.md).)_

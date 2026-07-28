@@ -259,12 +259,12 @@
       "_type": "request",
       "parentId": "fld_catalog",
       "name": "Create vendor (paste accessToken) → copy vendor.id",
-      "description": "Requires a Bearer token. Without it → 401. Returns { vendor } with an auto-generated slug; copy vendor.id into the item requests.",
+      "description": "Requires a Bearer token. Without it → 401. Returns { vendor } with an auto-generated slug; copy vendor.id into the item requests. lat/lng are optional — set them to enable nearest-rider dispatch.",
       "method": "POST",
       "url": "http://localhost:3000/catalog/vendors",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"name\": \"Mama Put Kitchen\",\n  \"description\": \"Best jollof in Lagos\"\n}"
+        "text": "{\n  \"name\": \"Mama Put Kitchen\",\n  \"description\": \"Best jollof in Lagos\",\n  \"lat\": 6.5244,\n  \"lng\": 3.3792\n}"
       },
       "headers": [
         { "name": "Content-Type", "value": "application/json" },

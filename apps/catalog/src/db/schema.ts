@@ -1,5 +1,6 @@
 import {
   boolean,
+  double,
   index,
   int,
   mysqlTable,
@@ -19,6 +20,9 @@ export const vendors = mysqlTable("vendors", {
   slug: varchar("slug", { length: 140 }).notNull().unique(),
   description: varchar("description", { length: 500 }),
   isOpen: boolean("is_open").default(true).notNull(),
+  // Pickup location — used by dispatch to match the nearest rider. Nullable until set.
+  lat: double("lat"),
+  lng: double("lng"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
