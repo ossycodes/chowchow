@@ -50,9 +50,10 @@ more or less durable.
 With the stack running, place an order, then peek at Redis:
 
 ```bash
-# in RedisInsight (http://localhost:8082) or the CLI:
-redis-cli --scan --pattern 'processed:*'      # the handled-event ids
-redis-cli TTL processed:<id>                  # ~604800 (7 days), counting down
+# browse them in RedisInsight (http://localhost:8082), or via the CLI. The container is on
+# host port 6380 (so it doesn't clash with a local Redis on 6379):
+redis-cli -p 6380 --scan --pattern 'processed:*'   # the handled-event ids
+redis-cli -p 6380 TTL processed:<id>               # ~604800 (7 days), counting down
 ```
 
 We verified it: after a checkout, a `processed:<event-id>` key appeared with a ~7-day TTL —
