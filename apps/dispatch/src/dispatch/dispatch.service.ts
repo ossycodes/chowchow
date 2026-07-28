@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { EventEmitter2 } from "@nestjs/event-emitter";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import {
   DispatchEventType,
   Topics,
@@ -10,6 +10,9 @@ import {
 import { wrapEvent } from "@chowdeck/kafka";
 import { DbService } from "../db/db.service";
 import { assignments, outboxEvents, riders } from "../db/schema";
+import { VENDOR_LOCATION_READER } from "../catalog/catalog.tokens";
+import type { VendorLocationReader } from "../catalog/vendor-location-reader";
+import { haversineKm, pickNearest } from "./geo";
 import type { RegisterRiderRequest } from "./dto/register-rider.request";
 import type { UpdateRiderRequest } from "./dto/update-rider.request";
 
@@ -44,6 +47,8 @@ export class DispatchService {
   constructor(
     private readonly dbService: DbService,
     private readonly events: EventEmitter2,
+    @Inject(VENDOR_LOCATION_READER)
+    private readonly vendorLocation: VendorLocationReader,
   ) {}
 
   // --- riders (ops/rider-app surface) ---
@@ -109,14 +114,11 @@ export class DispatchService {
       return;
     }
 
-    // Pick the least-recently-updated ONLINE rider (simple fairness). Geo-based
-    // nearest-rider matching arrives with live locations in the realtime slice.
-    const [rider] = await this.dbService.db
+    const online = await this.dbService.db
       .select()
       .from(riders)
-      .where(eq(riders.status, RiderStatus.Online))
-      .orderBy(asc(riders.updatedAt))
-      .limit(1);
+      .where(eq(riders.status, RiderStatus.Online));
+    const rider = await this.chooseRider(online, vendorId);
 
     const assignmentId = randomUUID();
 
@@ -171,6 +173,46 @@ export class DispatchService {
       riderId: rider.id,
       assignmentId,
     } satisfies RiderAssignedLocal);
+  }
+
+  /**
+   * Choose which ONLINE rider to assign. If we can get the vendor's pickup location AND some
+   * online riders have reported a position, pick the **nearest** (haversine). Otherwise fall
+   * back to the least-recently-updated rider (simple fairness) — e.g. a vendor without coords
+   * or riders that haven't pinged a location yet.
+   */
+  private async chooseRider(
+    online: RiderRow[],
+    vendorId: string,
+  ): Promise<RiderRow | undefined> {
+    if (online.length === 0) return undefined;
+
+    const vendorLoc = await this.vendorLocation
+      .getVendorLocation(vendorId)
+      .catch((err) => {
+        this.logger.warn(
+          `vendor location lookup failed for ${vendorId}: ${(err as Error).message}`,
+        );
+        return null;
+      });
+
+    if (vendorLoc) {
+      const located = online
+        .filter((r) => r.lat != null && r.lng != null)
+        .map((r) => ({ id: r.id, lat: r.lat as number, lng: r.lng as number }));
+      const nearest = pickNearest(vendorLoc, located);
+      if (nearest) {
+        this.logger.log(
+          `nearest rider ${nearest.id} @ ${haversineKm(vendorLoc, nearest).toFixed(2)} km ` +
+            `from vendor ${vendorId}`,
+        );
+        return online.find((r) => r.id === nearest.id);
+      }
+    }
+
+    return [...online].sort(
+      (a, b) => a.updatedAt.getTime() - b.updatedAt.getTime(),
+    )[0];
   }
 
   // --- realtime support ---

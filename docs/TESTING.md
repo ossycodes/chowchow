@@ -161,8 +161,12 @@ folders for gateway, catalog, orders, dispatch, payments, ledger, settlements.
 
 ## 4. Test the event-driven dispatch loop (Kafka)
 
+> **Nearest-rider matching:** give the vendor a pickup `lat/lng` (on `POST /catalog/vendors`)
+> and give riders a location — dispatch assigns the **closest** online rider (haversine, via a
+> gRPC `GetVendor` lookup), falling back to least-recently-used when coords are missing.
+
 ```bash
-# a rider must be ONLINE for assignment to succeed
+# a rider must be ONLINE for assignment to succeed (with a location for geo matching)
 curl -s -X POST $G/dispatch/riders -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' -d '{"name":"Emeka","lat":6.5244,"lng":3.3792}'
 

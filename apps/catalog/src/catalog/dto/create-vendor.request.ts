@@ -13,6 +13,9 @@ export const createVendorRequestSchema = z.object({
     .max(140)
     .optional(),
   description: z.string().max(500).optional(),
+  // Pickup location (WGS84). Optional; enables nearest-rider dispatch when set.
+  lat: z.number().gte(-90).lte(90).optional(),
+  lng: z.number().gte(-180).lte(180).optional(),
 });
 
 export type CreateVendorRequest = z.infer<typeof createVendorRequestSchema>;

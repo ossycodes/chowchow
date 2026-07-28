@@ -41,6 +41,8 @@ export class CatalogService {
         name: input.name,
         slug,
         description: input.description,
+        lat: input.lat,
+        lng: input.lng,
       });
     } catch (err) {
       if ((err as MysqlError).code === "ER_DUP_ENTRY") {
@@ -56,13 +58,19 @@ export class CatalogService {
   }
 
   async getVendorOrThrow(id: string): Promise<VendorRecord> {
+    const row = await this.getVendor(id);
+    if (!row) throw new NotFoundException("vendor not found");
+    return row;
+  }
+
+  /** Non-throwing lookup (used by the gRPC GetVendor handler). */
+  async getVendor(id: string): Promise<VendorRecord | null> {
     const [row] = await this.dbService.db
       .select()
       .from(vendors)
       .where(eq(vendors.id, id))
       .limit(1);
-    if (!row) throw new NotFoundException("vendor not found");
-    return row;
+    return row ?? null;
   }
 
   // --- menu items ---
