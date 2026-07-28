@@ -33,7 +33,7 @@ import { MESSAGE_CONSUMER, PROCESSED_STORE } from "./tokens";
     },
     {
       provide: PROCESSED_STORE,
-      useFactory: (): ProcessedEventStore => processedEventStoreFromEnv(),
+      useFactory: (): ProcessedEventStore => processedEventStoreFromEnv("ledger"),
     },
     LedgerConsumerRunner,
   ],

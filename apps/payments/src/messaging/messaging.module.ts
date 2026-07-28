@@ -72,7 +72,7 @@ import { PaymentsConsumerRunner } from "./payments-consumer.runner";
     },
     {
       provide: PROCESSED_STORE,
-      useFactory: (): ProcessedEventStore => processedEventStoreFromEnv(),
+      useFactory: (): ProcessedEventStore => processedEventStoreFromEnv("payments"),
     },
     RelayRunner,
     PaymentsConsumerRunner,
