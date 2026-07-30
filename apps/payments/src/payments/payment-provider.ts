@@ -1,26 +1,49 @@
 /** DI token for the payment provider port. */
 export const PAYMENT_PROVIDER = Symbol("PAYMENT_PROVIDER");
 
-export interface ChargeInput {
+export interface InitInput {
   amountKobo: number;
-  /** Idempotency reference we pass to the provider (we use the orderId). */
+  /** Our reference (the orderId) — the provider echoes it back on its webhook. */
   reference: string;
   customerId: string;
 }
 
-export interface ChargeResult {
-  success: boolean;
-  /** Provider's transaction reference (present on success). */
+/** Where a charge stands right after we start it. */
+export type PaymentOutcome = "pending" | "succeeded" | "failed";
+
+export interface InitResult {
+  /** The provider's transaction reference. */
   providerRef: string;
-  /** Why it failed (present on failure). */
+  /** `succeeded` = settled instantly (test); `pending` = awaits the provider's webhook. */
+  outcome: PaymentOutcome;
+  /** Where the customer completes payment (async providers). */
+  authorizationUrl?: string;
+  /** Why it failed (present on `failed`). */
   reason?: string;
 }
 
+export interface WebhookResult {
+  /** Our reference (= orderId) the webhook is about. */
+  reference: string;
+  outcome: "succeeded" | "failed";
+}
+
 /**
- * Port for charging a customer. The order/payments domain depends on THIS, not on any
- * specific provider — so a real Paystack/Flutterwave adapter can drop in later without
- * touching payment logic. (Ports & adapters, same pattern as the catalog gRPC client.)
+ * Port for charging a customer. Real providers are ASYNC: `initialize` starts the charge and
+ * the money is confirmed later by a signed `webhook`. The fake provider settles instantly
+ * (returns `succeeded` from initialize) so local dev needs no webhook. The payments domain
+ * depends on THIS, not on any specific provider.
  */
 export interface PaymentProvider {
-  charge(input: ChargeInput): Promise<ChargeResult>;
+  /** Start a charge. */
+  initialize(input: InitInput): Promise<InitResult>;
+  /**
+   * Verify a provider webhook by its signature and extract the result, or null if the
+   * signature is invalid / the event isn't one we act on. `rawBody` is the exact bytes the
+   * provider signed.
+   */
+  verifyWebhook(
+    signature: string | undefined,
+    rawBody: Buffer,
+  ): WebhookResult | null;
 }

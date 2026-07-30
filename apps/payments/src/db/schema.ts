@@ -27,6 +27,8 @@ export const payments = mysqlTable(
     deliveryFeeKobo: int("delivery_fee_kobo").notNull().default(0),
     status: varchar("status", { length: 16 }).notNull(), // PENDING | SUCCEEDED | FAILED
     providerRef: varchar("provider_ref", { length: 128 }),
+    // Where the customer completes payment (async providers). Null for instant/fake.
+    authorizationUrl: varchar("authorization_url", { length: 255 }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },

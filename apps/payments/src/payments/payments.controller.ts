@@ -3,8 +3,12 @@ import {
   createParamDecorator,
   type ExecutionContext,
   Get,
+  Headers,
+  HttpCode,
   NotFoundException,
   Param,
+  Post,
+  Req,
   UnauthorizedException,
 } from "@nestjs/common";
 import { PaymentsService } from "./payments.service";
@@ -43,5 +47,20 @@ export class PaymentsController {
       throw new NotFoundException("payment not found");
     }
     return { payment };
+  }
+
+  /**
+   * Provider webhook (e.g. Paystack charge.success). PUBLIC — providers don't carry our JWT;
+   * trust comes from the signature, verified in the service. Needs the RAW body for the HMAC,
+   * so the app is created with `rawBody: true`.
+   */
+  @Post("webhook")
+  @HttpCode(200)
+  async webhook(
+    @Headers("x-paystack-signature") signature: string | undefined,
+    @Req() req: { rawBody?: Buffer },
+  ) {
+    await this.payments.handleWebhook(signature, req.rawBody ?? Buffer.alloc(0));
+    return { received: true };
   }
 }

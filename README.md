@@ -180,7 +180,11 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
       haversine) when both locations are known; `order` fetches the vendor location from
       `catalog` over gRPC and takes the customer's from checkout; flat fallback otherwise.
       *(current)*
-- [ ] Phase 3 (cont.) — real transfer provider; road-distance/ETA (maps) provider
+- [x] **Async payment provider:** `payments` supports a Paystack-style adapter
+      (`PAYMENT_PROVIDER=paystack`) — charge stays PENDING until a **signed webhook**
+      (`POST /payments/webhook`, public, HMAC-SHA512 verified) confirms it → then PAID. Fake
+      instant provider stays the default. *(current)*
+- [ ] Phase 3 (cont.) — real bank-transfer payout provider; road-distance/ETA (maps) provider
 - [ ] Phase 4 — ops & scale (Kubernetes)
 
 See the roadmap in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#10-phased-roadmap).
