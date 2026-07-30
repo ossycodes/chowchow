@@ -6,6 +6,7 @@ import {
   Direction,
   LedgerService,
   PLATFORM_REVENUE,
+  RIDER_PAYABLE,
   vendorPayable,
 } from "./ledger.service";
 
@@ -14,9 +15,10 @@ const PAYMENT: PaymentSucceeded = {
   orderId: "oooooooo-oooo-oooo-oooo-oooooooooooo",
   customerId: "cccccccc-cccc-cccc-cccc-cccccccccccc",
   vendorId: "vvvvvvvv-vvvv-vvvv-vvvv-vvvvvvvvvvvv",
-  amountKobo: 500000,
-  commissionKobo: 100000, // 20%
+  amountKobo: 550000, // 500000 food + 50000 delivery
+  commissionKobo: 100000, // 20% of food subtotal
   vendorAmountKobo: 400000,
+  deliveryFeeKobo: 50000,
   providerRef: "fake_ref",
 };
 
@@ -76,7 +78,7 @@ function captureDb(opts: { journalExists?: boolean } = {}) {
 }
 
 describe("LedgerService.recordPayment", () => {
-  it("books a balanced 3-way split: DEBIT cash / CREDIT vendor_payable + platform_revenue", async () => {
+  it("books a balanced 4-way split: cash / vendor_payable + platform_revenue + rider_payable", async () => {
     const { db, inserted } = captureDb();
     const svc = new LedgerService({ db } as never);
 
@@ -90,11 +92,11 @@ describe("LedgerService.recordPayment", () => {
       direction: string;
       amountKobo: number;
     }>;
-    expect(lines).toHaveLength(3);
+    expect(lines).toHaveLength(4);
     const byAccount = (code: string) => lines.find((l) => l.accountCode === code)!;
     expect(byAccount(CASH)).toMatchObject({
       direction: Direction.Debit,
-      amountKobo: 500000,
+      amountKobo: 550000,
     });
     expect(byAccount(vendorPayable(PAYMENT.vendorId))).toMatchObject({
       direction: Direction.Credit,
@@ -103,6 +105,10 @@ describe("LedgerService.recordPayment", () => {
     expect(byAccount(PLATFORM_REVENUE)).toMatchObject({
       direction: Direction.Credit,
       amountKobo: 100000,
+    });
+    expect(byAccount(RIDER_PAYABLE)).toMatchObject({
+      direction: Direction.Credit,
+      amountKobo: 50000,
     });
     // the defining invariant: debits == credits
     const debit = lines

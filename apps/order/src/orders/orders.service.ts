@@ -32,6 +32,10 @@ export interface OrderWithItems {
 
 @Injectable()
 export class OrdersService {
+  private readonly deliveryFeeKobo = Number(
+    process.env.DELIVERY_FEE_KOBO ?? 50000,
+  );
+
   constructor(
     private readonly dbService: DbService,
     @Inject(CATALOG_PRICE_READER)
@@ -78,12 +82,16 @@ export class OrdersService {
       };
     });
 
-    const totalKobo = lines.reduce((sum, l) => sum + l.lineTotalKobo, 0);
+    const subtotalKobo = lines.reduce((sum, l) => sum + l.lineTotalKobo, 0);
+    const deliveryFeeKobo = this.deliveryFeeKobo;
+    const totalKobo = subtotalKobo + deliveryFeeKobo;
 
     const payload: OrderCreated = {
       orderId,
       customerId,
       vendorId: input.vendorId,
+      subtotalKobo,
+      deliveryFeeKobo,
       totalKobo,
       status: OrderStatus.Created,
     };
@@ -98,6 +106,7 @@ export class OrdersService {
         customerId,
         vendorId: input.vendorId,
         status: OrderStatus.Created,
+        deliveryFeeKobo,
         totalKobo,
       });
       await tx.insert(orderItems).values(lines);

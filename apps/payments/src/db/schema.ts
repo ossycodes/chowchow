@@ -24,6 +24,7 @@ export const payments = mysqlTable(
     amountKobo: int("amount_kobo").notNull(),
     commissionKobo: int("commission_kobo").notNull().default(0),
     vendorAmountKobo: int("vendor_amount_kobo").notNull().default(0),
+    deliveryFeeKobo: int("delivery_fee_kobo").notNull().default(0),
     status: varchar("status", { length: 16 }).notNull(), // PENDING | SUCCEEDED | FAILED
     providerRef: varchar("provider_ref", { length: 128 }),
     createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -1,0 +1,1 @@
+ALTER TABLE `orders` ADD `delivery_fee_kobo` int DEFAULT 0 NOT NULL;

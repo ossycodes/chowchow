@@ -64,12 +64,15 @@ export class PaymentsService {
     });
 
     if (result.success) {
-      // Split the charge: platform commission + what the vendor is owed. Integer kobo, so
-      // the two always sum back to the exact amount (no rounding leak).
+      // Split the charge: platform commission is taken from the FOOD subtotal; the delivery
+      // fee is held for the rider; the vendor gets the rest. Integer kobo, so the parts always
+      // sum back to the exact amount (no rounding leak):
+      //   total = vendorAmount + commission + deliveryFee
       const commissionKobo = Math.floor(
-        (order.totalKobo * this.commissionBps) / 10000,
+        (order.subtotalKobo * this.commissionBps) / 10000,
       );
-      const vendorAmountKobo = order.totalKobo - commissionKobo;
+      const vendorAmountKobo = order.subtotalKobo - commissionKobo;
+      const deliveryFeeKobo = order.deliveryFeeKobo;
 
       const payload: PaymentSucceeded = {
         paymentId,
@@ -79,6 +82,7 @@ export class PaymentsService {
         amountKobo: order.totalKobo,
         commissionKobo,
         vendorAmountKobo,
+        deliveryFeeKobo,
         providerRef: result.providerRef,
       };
       const event = wrapEvent<PaymentSucceeded>(
@@ -94,6 +98,7 @@ export class PaymentsService {
             providerRef: result.providerRef,
             commissionKobo,
             vendorAmountKobo,
+            deliveryFeeKobo,
           })
           .where(eq(payments.id, paymentId));
         await tx.insert(outboxEvents).values({

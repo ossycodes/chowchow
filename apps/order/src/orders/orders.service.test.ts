@@ -86,7 +86,8 @@ describe("OrdersService.checkout — pricing & validation", () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
-  it("prices from the catalog (not the client) and computes the total in kobo", async () => {
+  it("prices from the catalog (not the client) and computes subtotal + delivery fee", async () => {
+    process.env.DELIVERY_FEE_KOBO = "50000";
     const { db, inserted } = captureDb();
     const svc = new OrdersService(
       { db } as never,
@@ -109,19 +110,31 @@ describe("OrdersService.checkout — pricing & validation", () => {
       ],
     });
 
-    const order = inserted.order as { totalKobo: number; status: string };
+    const order = inserted.order as {
+      totalKobo: number;
+      deliveryFeeKobo: number;
+      status: string;
+    };
     const items = inserted.items as Array<{
       unitPriceKobo: number;
       lineTotalKobo: number;
       quantity: number;
     }>;
-    // 2×250000 + 3×100000 = 800000
-    expect(order.totalKobo).toBe(800000);
+    // subtotal 2×250000 + 3×100000 = 800000; + ₦500 delivery = 850000
+    expect(order.deliveryFeeKobo).toBe(50000);
+    expect(order.totalKobo).toBe(850000);
     expect(order.status).toBe(OrderStatus.Created);
     expect(items).toHaveLength(2);
     expect(items[0]).toMatchObject({ unitPriceKobo: 250000, lineTotalKobo: 500000 });
     expect(items[1]).toMatchObject({ unitPriceKobo: 100000, lineTotalKobo: 300000 });
-    // an order.created event was staged in the outbox (same transaction)
-    expect(inserted.outbox).toBeDefined();
+    // the order.created event carries the breakdown (subtotal + fee = total)
+    const outbox = inserted.outbox as {
+      envelope: { payload: { subtotalKobo: number; deliveryFeeKobo: number; totalKobo: number } };
+    };
+    expect(outbox.envelope.payload).toMatchObject({
+      subtotalKobo: 800000,
+      deliveryFeeKobo: 50000,
+      totalKobo: 850000,
+    });
   });
 });

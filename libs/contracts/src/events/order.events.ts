@@ -34,6 +34,11 @@ export const orderCreatedSchema = z.object({
   orderId: z.string().uuid(),
   customerId: z.string().uuid(),
   vendorId: z.string().uuid(),
+  /** Food subtotal (sum of line items) in kobo. */
+  subtotalKobo: z.number().int().nonnegative(),
+  /** Delivery fee (the rider's share) in kobo. */
+  deliveryFeeKobo: z.number().int().nonnegative(),
+  /** Grand total charged to the customer = subtotal + delivery fee. */
   totalKobo: z.number().int().nonnegative(),
   status: z.literal(OrderStatus.Created),
 });

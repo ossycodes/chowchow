@@ -135,14 +135,16 @@ curl -s $G/orders/$OID -H "Authorization: Bearer $TOKEN" \
 curl -s $G/payments/order/$OID -H "Authorization: Bearer $TOKEN"   # SUCCEEDED, amountKobo, providerRef
 ```
 
-And the **ledger** books that payment as a balanced journal, split by the platform
-**commission** (default 20%, `COMMISSION_BPS`):
+The customer is charged the food subtotal **plus a flat delivery fee** (`DELIVERY_FEE_KOBO`,
+default ₦500). The **ledger** books that payment as a balanced **4-way** journal — commission
+comes from the food, the fee is held for the rider:
 
 ```bash
 curl -s "$G/ledger/journals?limit=50" -H "Authorization: Bearer $TOKEN"
-#   → DEBIT cash <amount> / CREDIT vendor_payable:<id> <net> / CREDIT platform_revenue <commission>
+#   → DEBIT cash <total> / CREDIT vendor_payable:<id> <net> / CREDIT platform_revenue <commission>
+#                        / CREDIT rider_payable <delivery fee>   (all credits sum to cash)
 curl -s $G/ledger/accounts -H "Authorization: Bearer $TOKEN"
-#   → cash = total taken; vendor_payable:<id> = owed to vendor (net); platform_revenue = commission earned
+#   → cash = total taken; vendor_payable = owed to vendor; platform_revenue = commission; rider_payable = delivery fees held
 ```
 
 **Settlements** accrue what we owe each vendor and pay them out — closing the money loop:
