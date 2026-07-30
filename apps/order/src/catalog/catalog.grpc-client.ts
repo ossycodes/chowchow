@@ -6,13 +6,17 @@ import {
   type CatalogItemMessage,
   type GetItemsRequest,
   type GetItemsResponse,
+  type GetVendorRequest,
+  type VendorMessage,
 } from "@chowdeck/contracts";
+import type { GeoPoint } from "../orders/delivery-fee";
 import type { CatalogPriceReader } from "./catalog-price-reader";
 import { CATALOG_GRPC_CLIENT } from "./catalog.tokens";
 
 /** The generated-at-runtime shape of the Catalog gRPC service (methods return Observables). */
 interface CatalogGrpc {
   getItems(request: GetItemsRequest): Observable<GetItemsResponse>;
+  getVendor(request: GetVendorRequest): Observable<VendorMessage>;
 }
 
 /**
@@ -37,5 +41,12 @@ export class CatalogGrpcClient implements CatalogPriceReader, OnModuleInit {
     const res = await firstValueFrom(this.catalog.getItems({ ids }));
     // proto3 omits an empty repeated field, so `items` can be undefined.
     return res.items ?? [];
+  }
+
+  async getVendorLocation(vendorId: string): Promise<GeoPoint | null> {
+    const v = await firstValueFrom(this.catalog.getVendor({ id: vendorId }));
+    // empty id = not found; hasLocation=false = vendor exists but has no coordinates.
+    if (!v.id || !v.hasLocation) return null;
+    return { lat: v.lat, lng: v.lng };
   }
 }

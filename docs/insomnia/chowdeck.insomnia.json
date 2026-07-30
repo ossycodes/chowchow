@@ -368,12 +368,12 @@
       "_type": "request",
       "parentId": "fld_orders",
       "name": "Checkout (paste token, vendorId, itemId) → copy order.id",
-      "description": "No prices in the body — only ids + quantities. Response includes totalKobo computed server-side from catalog's live price.",
+      "description": "No prices in the body — only ids + quantities. Response includes totalKobo computed server-side from catalog's live price. deliveryLat/deliveryLng are optional: if set (and the vendor has a location) the delivery fee is distance-based, else flat.",
       "method": "POST",
       "url": "http://localhost:3000/orders",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"vendorId\": \"PASTE_VENDOR_ID\",\n  \"items\": [\n    { \"itemId\": \"PASTE_ITEM_ID\", \"quantity\": 2 }\n  ]\n}"
+        "text": "{\n  \"vendorId\": \"PASTE_VENDOR_ID\",\n  \"items\": [\n    { \"itemId\": \"PASTE_ITEM_ID\", \"quantity\": 2 }\n  ],\n  \"deliveryLat\": 6.5244,\n  \"deliveryLng\": 3.3792\n}"
       },
       "headers": [
         { "name": "Content-Type", "value": "application/json" },

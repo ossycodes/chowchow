@@ -8,8 +8,11 @@ export const envSchema = z.object({
   ORDER_HTTP_PORT: z.coerce.number().int().positive().default(3004),
   // Where the catalog gRPC server lives (host:port). Used to fetch prices at checkout.
   CATALOG_GRPC_URL: z.string().min(1).default("localhost:50051"),
-  // Flat delivery fee added at checkout (kobo). The rider's share. Default ₦500.
+  // Delivery fee (rider's share). When the vendor + customer locations are known it's
+  // distance-based: BASE + PER_KM × km. Otherwise the flat DELIVERY_FEE_KOBO is used.
   DELIVERY_FEE_KOBO: z.coerce.number().int().nonnegative().default(50000),
+  DELIVERY_FEE_BASE_KOBO: z.coerce.number().int().nonnegative().default(30000),
+  DELIVERY_FEE_PER_KM_KOBO: z.coerce.number().int().nonnegative().default(5000),
   KAFKA_ENABLED: z.enum(["true", "false"]).default("false"),
   KAFKA_BROKERS: z.string().min(1).default("localhost:9092"),
   KAFKA_CLIENT_ID: z.string().min(1).default("chowdeck"),

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { BadRequestException, ConflictException } from "@nestjs/common";
 import { OrderStatus, type CatalogItemMessage } from "@chowdeck/contracts";
 import { OrdersService } from "./orders.service";
+import { computeDeliveryFee, type GeoPoint } from "./delivery-fee";
 import type { CatalogPriceReader } from "../catalog/catalog-price-reader";
 
 const VENDOR = "11111111-1111-1111-1111-111111111111";
@@ -21,8 +22,14 @@ function item(overrides: Partial<CatalogItemMessage> = {}): CatalogItemMessage {
 }
 
 /** A fake catalog port — the whole point of ports/adapters: no gRPC needed to test. */
-function fakeCatalog(items: CatalogItemMessage[]): CatalogPriceReader {
-  return { getItems: async () => items };
+function fakeCatalog(
+  items: CatalogItemMessage[],
+  vendorLocation: GeoPoint | null = null,
+): CatalogPriceReader {
+  return {
+    getItems: async () => items,
+    getVendorLocation: async () => vendorLocation,
+  };
 }
 
 /** Captures what checkout would insert, so we can assert prices/totals without a real DB. */
@@ -136,5 +143,43 @@ describe("OrdersService.checkout — pricing & validation", () => {
       deliveryFeeKobo: 50000,
       totalKobo: 850000,
     });
+  });
+
+  it("uses a distance-based delivery fee when vendor + customer locations are known", async () => {
+    process.env.DELIVERY_FEE_BASE_KOBO = "30000";
+    process.env.DELIVERY_FEE_PER_KM_KOBO = "5000";
+    const vendorLoc = { lat: 6.5, lng: 3.3 };
+    const customerLoc = { lat: 6.6, lng: 3.4 };
+    const { db, inserted } = captureDb();
+    const svc = new OrdersService(
+      { db } as never,
+      fakeCatalog([item({ id: ITEM_A, priceKobo: 250000 })], vendorLoc),
+    );
+    vi.spyOn(svc, "getForCustomer").mockResolvedValue({
+      order: {} as never,
+      items: [],
+    });
+
+    await svc.checkout(CUSTOMER, {
+      vendorId: VENDOR,
+      items: [{ itemId: ITEM_A, quantity: 1 }],
+      deliveryLat: customerLoc.lat,
+      deliveryLng: customerLoc.lng,
+    });
+
+    const order = inserted.order as {
+      deliveryFeeKobo: number;
+      deliveryLat: number;
+      totalKobo: number;
+    };
+    const expectedFee = computeDeliveryFee(vendorLoc, customerLoc, {
+      baseKobo: 30000,
+      perKmKobo: 5000,
+      flatKobo: 50000,
+    });
+    expect(expectedFee).toBeGreaterThan(30000); // base + some distance
+    expect(order.deliveryFeeKobo).toBe(expectedFee);
+    expect(order.deliveryLat).toBe(customerLoc.lat);
+    expect(order.totalKobo).toBe(250000 + expectedFee);
   });
 });

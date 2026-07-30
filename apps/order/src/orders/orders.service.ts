@@ -22,6 +22,7 @@ import { orderItems, orders, outboxEvents } from "../db/schema";
 import { CATALOG_PRICE_READER } from "../catalog/catalog.tokens";
 import type { CatalogPriceReader } from "../catalog/catalog-price-reader";
 import { canTransition } from "./order-status";
+import { computeDeliveryFee, type DeliveryFeeConfig } from "./delivery-fee";
 import type { CreateOrderRequest } from "./dto/create-order.request";
 
 export type OrderRow = typeof orders.$inferSelect;
@@ -33,9 +34,11 @@ export interface OrderWithItems {
 
 @Injectable()
 export class OrdersService {
-  private readonly deliveryFeeKobo = Number(
-    process.env.DELIVERY_FEE_KOBO ?? 50000,
-  );
+  private readonly feeConfig: DeliveryFeeConfig = {
+    baseKobo: Number(process.env.DELIVERY_FEE_BASE_KOBO ?? 30000),
+    perKmKobo: Number(process.env.DELIVERY_FEE_PER_KM_KOBO ?? 5000),
+    flatKobo: Number(process.env.DELIVERY_FEE_KOBO ?? 50000),
+  };
 
   constructor(
     private readonly dbService: DbService,
@@ -84,7 +87,19 @@ export class OrdersService {
     });
 
     const subtotalKobo = lines.reduce((sum, l) => sum + l.lineTotalKobo, 0);
-    const deliveryFeeKobo = this.deliveryFeeKobo;
+
+    // Distance-based delivery fee: vendor pickup (from catalog) → customer drop-off (from the
+    // request). Falls back to a flat fee when either location is missing.
+    const customerLoc =
+      input.deliveryLat != null && input.deliveryLng != null
+        ? { lat: input.deliveryLat, lng: input.deliveryLng }
+        : null;
+    const vendorLoc = await this.catalog.getVendorLocation(input.vendorId);
+    const deliveryFeeKobo = computeDeliveryFee(
+      vendorLoc,
+      customerLoc,
+      this.feeConfig,
+    );
     const totalKobo = subtotalKobo + deliveryFeeKobo;
 
     const payload: OrderCreated = {
@@ -107,6 +122,8 @@ export class OrdersService {
         customerId,
         vendorId: input.vendorId,
         status: OrderStatus.Created,
+        deliveryLat: customerLoc?.lat,
+        deliveryLng: customerLoc?.lng,
         deliveryFeeKobo,
         totalKobo,
       });
