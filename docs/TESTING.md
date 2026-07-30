@@ -126,7 +126,10 @@ curl -s $G/orders/$OID -H "Authorization: Bearer $TOKEN"     # totalKobo = 50000
 ```
 
 **Payment is automatic** (event-driven): a moment after checkout, `payments` charges the
-order and the order advances **itself** to `PAID` — no manual step.
+order and the order advances **itself** to `PAID` — no manual step. (That's the default
+instant `fake` provider. Set `PAYMENT_PROVIDER=paystack` + `PAYSTACK_SECRET_KEY` to model the
+real async flow: the payment stays `PENDING` until a signed webhook `POST /payments/webhook`
+confirms it — see ELI5 #25.)
 
 ```bash
 sleep 3

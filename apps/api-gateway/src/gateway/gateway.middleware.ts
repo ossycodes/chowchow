@@ -131,8 +131,13 @@ export class GatewayMiddleware implements NestMiddleware {
       { prefix: "/orders", proxy: orderProxy, isPublic: () => false },
       // Dispatch (rider fleet + assignments) — internal/ops, always authed.
       { prefix: "/dispatch", proxy: dispatchProxy, isPublic: () => false },
-      // Payments — read-only view of your charges; always authed.
-      { prefix: "/payments", proxy: paymentsProxy, isPublic: () => false },
+      // Payments — read-only view of your charges (authed), except the provider webhook
+      // which is public (verified by signature, not JWT).
+      {
+        prefix: "/payments",
+        proxy: paymentsProxy,
+        isPublic: (p) => p === "/payments/webhook",
+      },
       // Ledger — finance/ops reporting (double-entry balances + journals); always authed.
       { prefix: "/ledger", proxy: ledgerProxy, isPublic: () => false },
       // Settlements — vendor payouts (ops); always authed.

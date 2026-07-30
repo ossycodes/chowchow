@@ -24,7 +24,9 @@ function loadEnvConfig(): Env {
 async function bootstrap() {
   const env = loadEnvConfig();
 
-  const app = await NestFactory.create(AppModule);
+  // rawBody: true keeps the exact request bytes (req.rawBody) so the webhook route can verify
+  // the provider's HMAC signature over what was actually signed.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   app.enableShutdownHooks();
 
   await app.listen(env.PAYMENTS_HTTP_PORT);
