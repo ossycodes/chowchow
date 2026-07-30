@@ -5,10 +5,11 @@ on:
   push:
     branches: [main]
 
-# Cancel superseded runs on the same ref (e.g. rapid pushes to a PR).
+# Cancel superseded runs on a PR branch (rapid pushes), but never cancel a run on main —
+# every commit that lands there should get a clean, complete run.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build-test:
