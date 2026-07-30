@@ -15,6 +15,13 @@
       "when": 1785066588183,
       "tag": "0001_needy_domino",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1785396470904,
+      "tag": "0002_small_kree",
+      "breakpoints": true
     }
   ]
 }

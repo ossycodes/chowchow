@@ -164,9 +164,13 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
       `catalog` over gRPC (`GetVendor`) and assigns the **closest** online rider by haversine
       distance, falling back to least-recently-used when coords are missing.
 - [x] **CI:** GitHub Actions on every PR — `build` + `typecheck` + unit tests, plus a
-      Kafka-loop **integration** job (Redpanda + MySQL via the compose file). *(current)*
-- [ ] Phase 3 (cont.) — rider delivery fee (4th split), payout scheduler, real transfer
-      provider; road-distance/ETA matching
+      Kafka-loop **integration** job (Redpanda + MySQL via the compose file).
+- [x] **Rider delivery fee:** checkout adds a flat delivery fee (`DELIVERY_FEE_KOBO`); the
+      money now splits **three ways** — `payments` reports vendor/platform/rider, `ledger`
+      books a balanced **4-way** journal (`cash` / `vendor_payable` / `platform_revenue` /
+      `rider_payable`). Commission is taken from the food subtotal, not the fee. *(current)*
+- [ ] Phase 3 (cont.) — rider payout/settlement, payout scheduler, real transfer provider;
+      distance-based delivery fee
 - [ ] Phase 4 — ops & scale (Kubernetes)
 
 See the roadmap in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#10-phased-roadmap).

@@ -28,5 +28,6 @@ little jargon as possible. If the code is the "how", these are the "what and why
 18. [Taking a Cut — commission splits](18-taking-a-cut-commission-splits.md)
 19. [Remembering Across Restarts — Redis idempotency](19-remembering-across-restarts-redis.md)
 20. [Finding the Closest Rider — geo matching](20-finding-the-closest-rider-geo.md)
+21. [The Rider's Cut — delivery fee](21-the-riders-cut-delivery-fee.md)
 
 _(More added as we build. See the roadmap in [../ARCHITECTURE.md](../ARCHITECTURE.md).)_

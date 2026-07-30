@@ -21,6 +21,8 @@ export const Direction = { Debit: "DEBIT", Credit: "CREDIT" } as const;
 export const CASH = "cash";
 /** Platform's earnings from commission (revenue). */
 export const PLATFORM_REVENUE = "platform_revenue";
+/** Delivery fees held for riders, collectively (liability). */
+export const RIDER_PAYABLE = "rider_payable";
 /** What we owe a specific vendor (liability). */
 export const vendorPayable = (vendorId: string) => `vendor_payable:${vendorId}`;
 
@@ -52,9 +54,10 @@ export class LedgerService {
   /**
    * Record a successful payment as a balanced double-entry journal:
    *   DEBIT  cash                     (asset ↑ — platform received money)
+   *   CREDIT vendor_payable:<vendor>  (liability ↑ — platform owes the vendor)
    *   CREDIT platform_revenue          (revenue ↑ — the platform's commission)
-   *   CREDIT vendor_payable:<vendor>  (liability ↑ — platform owes the vendor the rest)
-   * cash == commission + vendor_amount, so the journal balances.
+   *   CREDIT rider_payable             (liability ↑ — delivery fee held for riders)
+   * cash == vendor_amount + commission + delivery_fee, so the journal balances.
    *
    * Idempotent: `journals.reference` (= paymentId) is unique, so a replayed
    * `payment.succeeded` never double-books.
@@ -91,6 +94,15 @@ export class LedgerService {
         accountCode: PLATFORM_REVENUE,
         direction: Direction.Credit,
         amountKobo: payment.commissionKobo,
+      });
+    }
+    // The delivery fee is held for riders (liability) until a rider is paid out.
+    if (payment.deliveryFeeKobo > 0) {
+      await this.ensureAccount(RIDER_PAYABLE, AccountType.Liability);
+      lines.push({
+        accountCode: RIDER_PAYABLE,
+        direction: Direction.Credit,
+        amountKobo: payment.deliveryFeeKobo,
       });
     }
     assertBalanced(lines);
