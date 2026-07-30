@@ -29,5 +29,6 @@ little jargon as possible. If the code is the "how", these are the "what and why
 19. [Remembering Across Restarts — Redis idempotency](19-remembering-across-restarts-redis.md)
 20. [Finding the Closest Rider — geo matching](20-finding-the-closest-rider-geo.md)
 21. [The Rider's Cut — delivery fee](21-the-riders-cut-delivery-fee.md)
+22. [Paying the Riders — rider settlements](22-paying-the-riders-settlements.md)
 
 _(More added as we build. See the roadmap in [../ARCHITECTURE.md](../ARCHITECTURE.md).)_

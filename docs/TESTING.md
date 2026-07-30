@@ -147,13 +147,19 @@ curl -s $G/ledger/accounts -H "Authorization: Bearer $TOKEN"
 #   → cash = total taken; vendor_payable = owed to vendor; platform_revenue = commission; rider_payable = delivery fees held
 ```
 
-**Settlements** accrue what we owe each vendor and pay them out — closing the money loop:
+**Settlements** accrue what we owe each vendor **and** each rider, and pay them out —
+closing the money loop:
 
 ```bash
-curl -s $G/settlements/balances -H "Authorization: Bearer $TOKEN"    # owed per vendor (unsettled)
+# vendors — earn on payment.succeeded
+curl -s $G/settlements/balances -H "Authorization: Bearer $TOKEN"    # owed per vendor
 curl -s -X POST $G/settlements/run -H "Authorization: Bearer $TOKEN" # pay out all vendors
-# a moment later, the ledger books DEBIT vendor_payable / CREDIT cash → that vendor's
-# vendor_payable balance nets back to 0 (payment credit − settlement debit).
+
+# riders — earn on order.delivered (walk an order all the way to DELIVERED first)
+curl -s $G/settlements/riders/balances -H "Authorization: Bearer $TOKEN"    # owed per rider
+curl -s -X POST $G/settlements/riders/run -H "Authorization: Bearer $TOKEN" # pay out all riders
+# a moment later the ledger books DEBIT vendor_payable/CREDIT cash and
+# DEBIT rider_payable/CREDIT cash → both payable balances net back to 0.
 ```
 
 Prefer a GUI? Import [`insomnia/chowdeck.insomnia.json`](insomnia/chowdeck.insomnia.json) —

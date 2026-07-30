@@ -1,11 +1,24 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   SettlementEventType,
+  type OrderDelivered,
   type PaymentSucceeded,
 } from "@chowdeck/contracts";
 import { SettlementsService } from "./settlements.service";
 
 const VENDOR = "vvvvvvvv-vvvv-vvvv-vvvv-vvvvvvvvvvvv";
+const RIDER = "rrrrrrrr-rrrr-rrrr-rrrr-rrrrrrrrrrrr";
+
+function delivered(orderId: string, deliveryFeeKobo: number): OrderDelivered {
+  return {
+    orderId,
+    customerId: "cccccccc-cccc-cccc-cccc-cccccccccccc",
+    vendorId: VENDOR,
+    riderId: RIDER,
+    deliveryFeeKobo,
+    status: "DELIVERED",
+  };
+}
 
 function payment(paymentId: string, amountKobo: number): PaymentSucceeded {
   return {
@@ -91,5 +104,74 @@ describe("SettlementsService.runAll", () => {
     };
     const svc = new SettlementsService({ db } as never);
     expect(await svc.runAll()).toEqual([]);
+  });
+});
+
+describe("SettlementsService.recordRiderEarning", () => {
+  it("is idempotent: a duplicate orderId is skipped", async () => {
+    const insert = vi.fn(() => ({
+      values: () => Promise.reject({ code: "ER_DUP_ENTRY" }),
+    }));
+    const svc = new SettlementsService({ db: { insert } } as never);
+    await expect(
+      svc.recordRiderEarning(delivered("o1", 50000)),
+    ).resolves.toBeUndefined();
+    expect(insert).toHaveBeenCalledOnce();
+  });
+
+  it("skips a zero delivery fee (nothing owed, no write)", async () => {
+    const insert = vi.fn();
+    const svc = new SettlementsService({ db: { insert } } as never);
+    await svc.recordRiderEarning(delivered("o2", 0));
+    expect(insert).not.toHaveBeenCalled();
+  });
+});
+
+describe("SettlementsService.runRiderSettlements", () => {
+  it("pays out a rider's earnings and emits settlement.rider_completed", async () => {
+    const captured: Record<string, unknown> = {};
+    const unsettled = [
+      { id: "re1", riderId: RIDER, amountKobo: 50000, settlementId: null },
+      { id: "re2", riderId: RIDER, amountKobo: 50000, settlementId: null },
+    ];
+    let selectCall = 0;
+    const db = {
+      select: () => ({
+        from: () => ({
+          where: () => {
+            selectCall += 1;
+            return selectCall === 1
+              ? Promise.resolve(unsettled)
+              : Promise.resolve(
+                  unsettled.map((r) => ({ id: r.id, amountKobo: r.amountKobo })),
+                );
+          },
+        }),
+      }),
+      transaction: async (cb: (tx: unknown) => Promise<void>) => {
+        const tx = {
+          insert: () => ({
+            values: (v: unknown) => {
+              const val = v as Record<string, unknown>;
+              if ("earningsCount" in val) captured.settlement = val;
+              else if ("topic" in val) captured.outbox = val;
+              return Promise.resolve();
+            },
+          }),
+          update: () => ({ set: () => ({ where: () => Promise.resolve() }) }),
+        };
+        return cb(tx);
+      },
+    };
+    const svc = new SettlementsService({ db } as never);
+
+    const created = await svc.runRiderSettlements();
+
+    expect(created).toHaveLength(1);
+    const s = captured.settlement as { amountKobo: number; earningsCount: number };
+    expect(s.amountKobo).toBe(100000); // 50000 + 50000
+    expect(s.earningsCount).toBe(2);
+    const outbox = captured.outbox as { envelope: { type: string } };
+    expect(outbox.envelope.type).toBe(SettlementEventType.RiderCompleted);
   });
 });

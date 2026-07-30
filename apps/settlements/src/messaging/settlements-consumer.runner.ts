@@ -12,9 +12,11 @@ import {
   type ProcessedEventStore,
 } from "@chowdeck/kafka";
 import {
+  OrderEventType,
   PaymentEventType,
   Topics,
   type EventEnvelope,
+  type OrderDelivered,
   type PaymentSucceeded,
 } from "@chowdeck/contracts";
 import { SettlementsService } from "../settlements/settlements.service";
@@ -41,8 +43,17 @@ export class SettlementsConsumerRunner
   }
 
   private async handle(event: EventEnvelope): Promise<void> {
-    if (event.type !== PaymentEventType.Succeeded) return; // ignore payment.failed etc.
-    await this.settlements.recordEarning(event.payload as PaymentSucceeded);
+    switch (event.type) {
+      case PaymentEventType.Succeeded: // vendor earning (net of commission)
+        await this.settlements.recordEarning(event.payload as PaymentSucceeded);
+        break;
+      case OrderEventType.Delivered: // rider earning (delivery fee)
+        await this.settlements.recordRiderEarning(
+          event.payload as OrderDelivered,
+        );
+        break;
+      // ignore other events on these topics
+    }
   }
 
   async onApplicationBootstrap(): Promise<void> {
@@ -55,8 +66,11 @@ export class SettlementsConsumerRunner
     }
     await this.consumer.connect();
     await this.consumer.subscribe(Topics.Payment, this.handler);
+    await this.consumer.subscribe(Topics.Order, this.handler);
     await this.consumer.run();
-    this.logger.log(`consumer running — subscribed to topic "${Topics.Payment}"`);
+    this.logger.log(
+      `consumer running — subscribed to "${Topics.Payment}" + "${Topics.Order}"`,
+    );
   }
 
   async onApplicationShutdown(): Promise<void> {

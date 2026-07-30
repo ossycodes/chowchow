@@ -620,6 +620,41 @@
       "body": {},
       "headers": [{ "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }],
       "metaSortKey": 232
+    },
+    {
+      "_id": "req_set_rider_balances",
+      "_type": "request",
+      "parentId": "fld_settlements",
+      "name": "Rider balances owed (accrue on order DELIVERED)",
+      "description": "Riders earn the delivery fee once an order reaches DELIVERED. Walk an order all the way through the lifecycle first.",
+      "method": "GET",
+      "url": "http://localhost:3000/settlements/riders/balances",
+      "body": {},
+      "headers": [{ "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }],
+      "metaSortKey": 233
+    },
+    {
+      "_id": "req_set_rider_run",
+      "_type": "request",
+      "parentId": "fld_settlements",
+      "name": "Run rider payout (settle all riders)",
+      "description": "Pays out every rider with unsettled delivery earnings; emits settlement.rider_completed → ledger books DEBIT rider_payable / CREDIT cash.",
+      "method": "POST",
+      "url": "http://localhost:3000/settlements/riders/run",
+      "body": {},
+      "headers": [{ "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }],
+      "metaSortKey": 234
+    },
+    {
+      "_id": "req_set_rider_list",
+      "_type": "request",
+      "parentId": "fld_settlements",
+      "name": "List rider settlements",
+      "method": "GET",
+      "url": "http://localhost:3000/settlements/riders",
+      "body": {},
+      "headers": [{ "name": "Authorization", "value": "Bearer PASTE_ACCESS_TOKEN" }],
+      "metaSortKey": 235
     }
   ]
 }
