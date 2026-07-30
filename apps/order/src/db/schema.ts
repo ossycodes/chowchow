@@ -1,4 +1,5 @@
 import {
+  double,
   index,
   int,
   json,
@@ -23,6 +24,9 @@ export const orders = mysqlTable(
     status: varchar("status", { length: 24 }).notNull(),
     // The rider assigned to deliver this order (set on RIDER_ASSIGNED). Null until then.
     riderId: varchar("rider_id", { length: 36 }),
+    // Customer's delivery location (drives the distance-based delivery fee). Nullable.
+    deliveryLat: double("delivery_lat"),
+    deliveryLng: double("delivery_lng"),
     // Delivery fee (rider's share) in kobo. totalKobo already includes it.
     deliveryFeeKobo: int("delivery_fee_kobo").notNull().default(0),
     totalKobo: int("total_kobo").notNull(),

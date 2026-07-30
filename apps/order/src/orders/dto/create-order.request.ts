@@ -16,6 +16,9 @@ export const createOrderRequestSchema = z.object({
     )
     .min(1, "an order needs at least one item")
     .max(50),
+  // Customer's delivery location — enables a distance-based delivery fee. Optional.
+  deliveryLat: z.number().gte(-90).lte(90).optional(),
+  deliveryLng: z.number().gte(-180).lte(180).optional(),
 });
 
 export type CreateOrderRequest = z.infer<typeof createOrderRequestSchema>;

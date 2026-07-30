@@ -31,5 +31,6 @@ little jargon as possible. If the code is the "how", these are the "what and why
 21. [The Rider's Cut — delivery fee](21-the-riders-cut-delivery-fee.md)
 22. [Paying the Riders — rider settlements](22-paying-the-riders-settlements.md)
 23. [Paying on a Timer — payout scheduler](23-paying-on-a-timer-scheduler.md)
+24. [A Fairer Fee — delivery by distance](24-fair-delivery-fee-by-distance.md)
 
 _(More added as we build. See the roadmap in [../ARCHITECTURE.md](../ARCHITECTURE.md).)_

@@ -176,7 +176,11 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
 - [x] **Payout scheduler:** `settlements` can run vendor + rider payouts automatically on a
       timer (`SETTLEMENT_SCHEDULE_ENABLED` / `SETTLEMENT_INTERVAL_MS`); manual `/run` endpoints
       remain as an ops override. In-flight guard; idempotent payouts. *(current)*
-- [ ] Phase 3 (cont.) — real transfer provider; distance-based delivery fee
+- [x] **Distance-based delivery fee:** the fee is `base + perKm × distance` (vendor→customer,
+      haversine) when both locations are known; `order` fetches the vendor location from
+      `catalog` over gRPC and takes the customer's from checkout; flat fallback otherwise.
+      *(current)*
+- [ ] Phase 3 (cont.) — real transfer provider; road-distance/ETA (maps) provider
 - [ ] Phase 4 — ops & scale (Kubernetes)
 
 See the roadmap in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#10-phased-roadmap).
