@@ -1,0 +1,1 @@
+ALTER TABLE `orders` ADD `rider_id` varchar(36);

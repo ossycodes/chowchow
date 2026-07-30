@@ -4,16 +4,25 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import {
   SettlementEventType,
   Topics,
+  type OrderDelivered,
   type PaymentSucceeded,
+  type RiderSettlementCompleted,
   type SettlementCompleted,
 } from "@chowdeck/contracts";
 import { wrapEvent } from "@chowdeck/kafka";
 import { DbService } from "../db/db.service";
-import { earnings, outboxEvents, settlements } from "../db/schema";
+import {
+  earnings,
+  outboxEvents,
+  riderEarnings,
+  riderSettlements,
+  settlements,
+} from "../db/schema";
 
 export const SettlementStatus = { Paid: "PAID" } as const;
 
 export type SettlementRow = typeof settlements.$inferSelect;
+export type RiderSettlementRow = typeof riderSettlements.$inferSelect;
 
 interface MysqlError {
   code?: string;
@@ -21,6 +30,12 @@ interface MysqlError {
 
 export interface VendorBalance {
   vendorId: string;
+  owedKobo: number;
+  earningsCount: number;
+}
+
+export interface RiderBalance {
+  riderId: string;
   owedKobo: number;
   earningsCount: number;
 }
@@ -142,6 +157,129 @@ export class SettlementsService {
       created.push({
         id: settlementId,
         vendorId: balance.vendorId,
+        amountKobo,
+        earningsCount: ids.length,
+        status: SettlementStatus.Paid,
+        createdAt: new Date(),
+      });
+    }
+
+    return created;
+  }
+
+  // --- riders (delivery-fee earnings, accrued on order.delivered) ---
+
+  /**
+   * Record what we owe a rider for one delivered order. Idempotent: `riderEarnings.orderId`
+   * is unique, so a replayed `order.delivered` can't be paid out twice.
+   */
+  async recordRiderEarning(delivered: OrderDelivered): Promise<void> {
+    if (delivered.deliveryFeeKobo <= 0) return; // nothing owed
+    try {
+      await this.dbService.db.insert(riderEarnings).values({
+        id: randomUUID(),
+        orderId: delivered.orderId,
+        riderId: delivered.riderId,
+        amountKobo: delivered.deliveryFeeKobo,
+      });
+    } catch (err) {
+      if ((err as MysqlError).code === "ER_DUP_ENTRY") {
+        this.logger.log(
+          `delivery for order ${delivered.orderId} already recorded — skipping`,
+        );
+        return;
+      }
+      throw err;
+    }
+  }
+
+  /** Unsettled amount owed per rider. */
+  async getRiderBalances(): Promise<RiderBalance[]> {
+    const rows = await this.dbService.db
+      .select()
+      .from(riderEarnings)
+      .where(isNull(riderEarnings.settlementId));
+    const byRider = new Map<string, RiderBalance>();
+    for (const r of rows) {
+      const b = byRider.get(r.riderId) ?? {
+        riderId: r.riderId,
+        owedKobo: 0,
+        earningsCount: 0,
+      };
+      b.owedKobo += r.amountKobo;
+      b.earningsCount += 1;
+      byRider.set(r.riderId, b);
+    }
+    return [...byRider.values()];
+  }
+
+  async listRiderSettlements(): Promise<RiderSettlementRow[]> {
+    return this.dbService.db.select().from(riderSettlements);
+  }
+
+  /**
+   * Pay out every rider with unsettled earnings — same snapshot-then-stamp pattern as vendor
+   * settlements, emitting `settlement.rider_completed` (→ ledger books DEBIT rider_payable /
+   * CREDIT cash).
+   */
+  async runRiderSettlements(): Promise<RiderSettlementRow[]> {
+    const balances = await this.getRiderBalances();
+    const created: RiderSettlementRow[] = [];
+
+    for (const balance of balances) {
+      const unsettled = await this.dbService.db
+        .select({ id: riderEarnings.id, amountKobo: riderEarnings.amountKobo })
+        .from(riderEarnings)
+        .where(
+          and(
+            eq(riderEarnings.riderId, balance.riderId),
+            isNull(riderEarnings.settlementId),
+          ),
+        );
+      if (unsettled.length === 0) continue;
+
+      const ids = unsettled.map((e) => e.id);
+      const amountKobo = unsettled.reduce((s, e) => s + e.amountKobo, 0);
+      const settlementId = randomUUID();
+
+      const payload: RiderSettlementCompleted = {
+        settlementId,
+        riderId: balance.riderId,
+        amountKobo,
+        earningsCount: ids.length,
+      };
+      const event = wrapEvent<RiderSettlementCompleted>(
+        SettlementEventType.RiderCompleted,
+        payload,
+        { producer: "settlements", correlationId: settlementId },
+      );
+
+      await this.dbService.db.transaction(async (tx) => {
+        await tx.insert(riderSettlements).values({
+          id: settlementId,
+          riderId: balance.riderId,
+          amountKobo,
+          earningsCount: ids.length,
+          status: SettlementStatus.Paid,
+        });
+        await tx
+          .update(riderEarnings)
+          .set({ settlementId })
+          .where(inArray(riderEarnings.id, ids));
+        await tx.insert(outboxEvents).values({
+          id: event.id,
+          topic: Topics.Settlement,
+          envelope: event,
+          key: balance.riderId,
+        });
+      });
+
+      this.logger.log(
+        `settled rider ${balance.riderId}: ${amountKobo} kobo over ${ids.length} delivery(ies)`,
+      );
+      created.push({
+        id: settlementId,
+        riderId: balance.riderId,
         amountKobo,
         earningsCount: ids.length,
         status: SettlementStatus.Paid,

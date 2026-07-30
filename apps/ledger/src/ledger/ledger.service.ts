@@ -3,6 +3,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 import type {
   PaymentSucceeded,
+  RiderSettlementCompleted,
   SettlementCompleted,
 } from "@chowdeck/contracts";
 import { DbService } from "../db/db.service";
@@ -198,6 +199,66 @@ export class LedgerService {
     }
     this.logger.log(
       `booked settlement ${settlement.settlementId}: DEBIT ${vendorPayable(settlement.vendorId)} ` +
+        `${settlement.amountKobo} / CREDIT cash ${settlement.amountKobo}`,
+    );
+  }
+
+  /**
+   * Record a rider payout — DEBIT rider_payable / CREDIT cash. Drains the collective
+   * rider_payable liability as riders are paid. Idempotent by `reference` (= settlementId).
+   */
+  async recordRiderSettlement(
+    settlement: RiderSettlementCompleted,
+  ): Promise<void> {
+    const existing = await this.dbService.db
+      .select({ id: journals.id })
+      .from(journals)
+      .where(eq(journals.reference, settlement.settlementId))
+      .limit(1);
+    if (existing.length > 0) {
+      this.logger.log(
+        `rider settlement ${settlement.settlementId} already booked — skipping`,
+      );
+      return;
+    }
+
+    await this.ensureAccount(CASH, AccountType.Asset);
+    await this.ensureAccount(RIDER_PAYABLE, AccountType.Liability);
+
+    const lines: DraftLine[] = [
+      {
+        accountCode: RIDER_PAYABLE,
+        direction: Direction.Debit,
+        amountKobo: settlement.amountKobo,
+      },
+      { accountCode: CASH, direction: Direction.Credit, amountKobo: settlement.amountKobo },
+    ];
+    assertBalanced(lines);
+
+    const journalId = randomUUID();
+    try {
+      await this.dbService.db.transaction(async (tx) => {
+        await tx.insert(journals).values({
+          id: journalId,
+          reference: settlement.settlementId,
+          memo: `settlement payout to rider ${settlement.riderId}`,
+        });
+        await tx.insert(entryLines).values(
+          lines.map((l) => ({
+            id: randomUUID(),
+            journalId,
+            accountCode: l.accountCode,
+            direction: l.direction,
+            amountKobo: l.amountKobo,
+          })),
+        );
+      });
+    } catch (err) {
+      if ((err as MysqlError).code === "ER_DUP_ENTRY") return;
+      throw err;
+    }
+    this.logger.log(
+      `booked rider settlement ${settlement.settlementId}: DEBIT ${RIDER_PAYABLE} ` +
         `${settlement.amountKobo} / CREDIT cash ${settlement.amountKobo}`,
     );
   }

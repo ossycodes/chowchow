@@ -13,6 +13,7 @@ import {
   Topics,
   type CatalogItemMessage,
   type OrderCreated,
+  type OrderDelivered,
   type OrderReady,
 } from "@chowdeck/contracts";
 import { wrapEvent } from "@chowdeck/kafka";
@@ -166,40 +167,56 @@ export class OrdersService {
     if (!canTransition(from, to)) {
       throw new ConflictException(`illegal transition ${from} → ${to}`);
     }
-    await this.applyStatus(order.id, order.customerId, order.vendorId, to);
+    await this.applyStatus(order, to);
     return this.getForCustomer(customerId, orderId);
   }
 
   /**
    * Persist a status change and, for statuses other services react to, write the matching
-   * outbox event in the SAME transaction. Currently only READY fans out (→ dispatch);
-   * more transitions will emit as their consumers arrive.
+   * outbox event in the SAME transaction:
+   *   - READY     → order.ready     (dispatch assigns a rider)
+   *   - DELIVERED → order.delivered (settlements accrues the rider's delivery-fee earning)
    */
-  private async applyStatus(
-    orderId: string,
-    customerId: string,
-    vendorId: string,
-    to: OrderStatus,
-  ): Promise<void> {
+  private async applyStatus(order: OrderRow, to: OrderStatus): Promise<void> {
     await this.dbService.db.transaction(async (tx) => {
-      await tx.update(orders).set({ status: to }).where(eq(orders.id, orderId));
+      await tx.update(orders).set({ status: to }).where(eq(orders.id, order.id));
 
       if (to === OrderStatus.Ready) {
-        const payload: OrderReady = {
-          orderId,
-          customerId,
-          vendorId,
-          status: OrderStatus.Ready,
-        };
-        const event = wrapEvent<OrderReady>(OrderEventType.Ready, payload, {
-          producer: "order",
-          correlationId: orderId,
-        });
+        const event = wrapEvent<OrderReady>(
+          OrderEventType.Ready,
+          {
+            orderId: order.id,
+            customerId: order.customerId,
+            vendorId: order.vendorId,
+            status: OrderStatus.Ready,
+          },
+          { producer: "order", correlationId: order.id },
+        );
         await tx.insert(outboxEvents).values({
           id: event.id,
           topic: Topics.Order,
           envelope: event,
-          key: orderId,
+          key: order.id,
+        });
+      } else if (to === OrderStatus.Delivered && order.riderId) {
+        // The rider earned their delivery fee — only on completed delivery.
+        const event = wrapEvent<OrderDelivered>(
+          OrderEventType.Delivered,
+          {
+            orderId: order.id,
+            customerId: order.customerId,
+            vendorId: order.vendorId,
+            riderId: order.riderId,
+            deliveryFeeKobo: order.deliveryFeeKobo,
+            status: OrderStatus.Delivered,
+          },
+          { producer: "order", correlationId: order.id },
+        );
+        await tx.insert(outboxEvents).values({
+          id: event.id,
+          topic: Topics.Order,
+          envelope: event,
+          key: order.id,
         });
       }
     });
@@ -241,11 +258,11 @@ export class OrdersService {
     const from = order.status as OrderStatus;
     if (from === OrderStatus.RiderAssigned) return true; // already applied
     if (!canTransition(from, OrderStatus.RiderAssigned)) return false;
+    // Remember which rider is delivering — needed to pay them on order.delivered.
     await this.dbService.db
       .update(orders)
-      .set({ status: OrderStatus.RiderAssigned })
+      .set({ status: OrderStatus.RiderAssigned, riderId })
       .where(eq(orders.id, orderId));
-    void riderId; // (persisting the rider on the order comes with the dispatch read-model)
     return true;
   }
 }

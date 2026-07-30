@@ -168,9 +168,12 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
 - [x] **Rider delivery fee:** checkout adds a flat delivery fee (`DELIVERY_FEE_KOBO`); the
       money now splits **three ways** — `payments` reports vendor/platform/rider, `ledger`
       books a balanced **4-way** journal (`cash` / `vendor_payable` / `platform_revenue` /
-      `rider_payable`). Commission is taken from the food subtotal, not the fee. *(current)*
-- [ ] Phase 3 (cont.) — rider payout/settlement, payout scheduler, real transfer provider;
-      distance-based delivery fee
+      `rider_payable`). Commission is taken from the food subtotal, not the fee.
+- [x] **Rider payouts:** order remembers its rider and emits `order.delivered` on delivery;
+      `settlements` accrues a rider earning and pays riders out (`/settlements/riders/run`),
+      emitting `settlement.rider_completed` → `ledger` books `DEBIT rider_payable / CREDIT
+      cash`. Both vendors and riders now settle; every `*_payable` nets to zero. *(current)*
+- [ ] Phase 3 (cont.) — payout scheduler, real transfer provider; distance-based delivery fee
 - [ ] Phase 4 — ops & scale (Kubernetes)
 
 See the roadmap in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#10-phased-roadmap).

@@ -21,6 +21,8 @@ export const orders = mysqlTable(
     customerId: varchar("customer_id", { length: 36 }).notNull(),
     vendorId: varchar("vendor_id", { length: 36 }).notNull(),
     status: varchar("status", { length: 24 }).notNull(),
+    // The rider assigned to deliver this order (set on RIDER_ASSIGNED). Null until then.
+    riderId: varchar("rider_id", { length: 36 }),
     // Delivery fee (rider's share) in kobo. totalKobo already includes it.
     deliveryFeeKobo: int("delivery_fee_kobo").notNull().default(0),
     totalKobo: int("total_kobo").notNull(),

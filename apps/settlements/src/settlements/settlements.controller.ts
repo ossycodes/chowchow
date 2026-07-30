@@ -24,4 +24,21 @@ export class SettlementsController {
   async balances() {
     return { balances: await this.settlements.getBalances() };
   }
+
+  // --- rider payouts (delivery-fee earnings) ---
+
+  @Post("riders/run")
+  async runRiders() {
+    return { settlements: await this.settlements.runRiderSettlements() };
+  }
+
+  @Get("riders")
+  async listRiders() {
+    return { settlements: await this.settlements.listRiderSettlements() };
+  }
+
+  @Get("riders/balances")
+  async riderBalances() {
+    return { balances: await this.settlements.getRiderBalances() };
+  }
 }

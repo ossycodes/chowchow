@@ -55,3 +55,17 @@ export const orderReadySchema = z.object({
   status: z.literal(OrderStatus.Ready),
 });
 export type OrderReady = z.infer<typeof orderReadySchema>;
+
+/**
+ * Emitted when an order is delivered. The rider has earned their delivery fee — settlements
+ * consumes this to accrue a rider earning (the rider is only paid for completed deliveries).
+ */
+export const orderDeliveredSchema = z.object({
+  orderId: z.string().uuid(),
+  customerId: z.string().uuid(),
+  vendorId: z.string().uuid(),
+  riderId: z.string().uuid(),
+  deliveryFeeKobo: z.number().int().nonnegative(),
+  status: z.literal(OrderStatus.Delivered),
+});
+export type OrderDelivered = z.infer<typeof orderDeliveredSchema>;

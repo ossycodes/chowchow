@@ -17,6 +17,7 @@ import {
   Topics,
   type EventEnvelope,
   type PaymentSucceeded,
+  type RiderSettlementCompleted,
   type SettlementCompleted,
 } from "@chowdeck/contracts";
 import { LedgerService } from "../ledger/ledger.service";
@@ -52,6 +53,11 @@ export class LedgerConsumerRunner
         break;
       case SettlementEventType.Completed:
         await this.ledger.recordSettlement(event.payload as SettlementCompleted);
+        break;
+      case SettlementEventType.RiderCompleted:
+        await this.ledger.recordRiderSettlement(
+          event.payload as RiderSettlementCompleted,
+        );
         break;
       // ignore payment.failed and any other events on these topics
     }
