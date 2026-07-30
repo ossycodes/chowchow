@@ -173,7 +173,10 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
       `settlements` accrues a rider earning and pays riders out (`/settlements/riders/run`),
       emitting `settlement.rider_completed` → `ledger` books `DEBIT rider_payable / CREDIT
       cash`. Both vendors and riders now settle; every `*_payable` nets to zero. *(current)*
-- [ ] Phase 3 (cont.) — payout scheduler, real transfer provider; distance-based delivery fee
+- [x] **Payout scheduler:** `settlements` can run vendor + rider payouts automatically on a
+      timer (`SETTLEMENT_SCHEDULE_ENABLED` / `SETTLEMENT_INTERVAL_MS`); manual `/run` endpoints
+      remain as an ops override. In-flight guard; idempotent payouts. *(current)*
+- [ ] Phase 3 (cont.) — real transfer provider; distance-based delivery fee
 - [ ] Phase 4 — ops & scale (Kubernetes)
 
 See the roadmap in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#10-phased-roadmap).

@@ -162,6 +162,10 @@ curl -s -X POST $G/settlements/riders/run -H "Authorization: Bearer $TOKEN" # pa
 # DEBIT rider_payable/CREDIT cash → both payable balances net back to 0.
 ```
 
+Prefer it automatic? Start settlements with `SETTLEMENT_SCHEDULE_ENABLED=true` (and
+`SETTLEMENT_INTERVAL_MS`, default 5 min) and it runs both payouts on a timer — no manual
+`/run` needed.
+
 Prefer a GUI? Import [`insomnia/chowdeck.insomnia.json`](insomnia/chowdeck.insomnia.json) —
 folders for gateway, catalog, orders, dispatch, payments, ledger, settlements.
 
