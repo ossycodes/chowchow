@@ -33,5 +33,6 @@ little jargon as possible. If the code is the "how", these are the "what and why
 23. [Paying on a Timer — payout scheduler](23-paying-on-a-timer-scheduler.md)
 24. [A Fairer Fee — delivery by distance](24-fair-delivery-fee-by-distance.md)
 25. [A Real Payment Provider — webhooks](25-a-real-payment-provider-webhooks.md)
+26. [Consumers That Recover Quickly — Kafka resilience](26-consumers-that-recover-quickly.md)
 
 _(More added as we build. See the roadmap in [../ARCHITECTURE.md](../ARCHITECTURE.md).)_
