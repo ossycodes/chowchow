@@ -183,7 +183,10 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
 - [x] **Async payment provider:** `payments` supports a Paystack-style adapter
       (`PAYMENT_PROVIDER=paystack`) — charge stays PENDING until a **signed webhook**
       (`POST /payments/webhook`, public, HMAC-SHA512 verified) confirms it → then PAID. Fake
-      instant provider stays the default. *(current)*
+      instant provider stays the default.
+- [x] **Consumer resilience:** shared Kafka consumer tuned for graceful recovery — shorter
+      session timeout (10s) so a killed member is evicted fast, `restartOnFailure` self-heal,
+      client retries. A restarted consumer rejoins in ~4s with no crash storm. *(current)*
 - [ ] Phase 3 (cont.) — real bank-transfer payout provider; road-distance/ETA (maps) provider
 - [ ] Phase 4 — ops & scale (Kubernetes)
 

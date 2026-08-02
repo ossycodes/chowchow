@@ -20,8 +20,24 @@ export class KafkaJsConsumer implements MessageConsumer {
       clientId: config.clientId,
       brokers: config.brokers,
       logLevel: logLevel.WARN,
+      // Keep retrying transient connection/broker errors instead of giving up.
+      retry: { retries: 10, initialRetryTime: 300, maxRetryTime: 30000 },
     });
-    this.consumer = this.kafka.consumer({ groupId: config.groupId });
+    this.consumer = this.kafka.consumer({
+      groupId: config.groupId,
+      // Evict a dead/crashed member in ~10s instead of the 30s default — a lingering slot
+      // keeps the whole group rebalancing, which stalls fetches (the "Fetch timed out"
+      // crashes seen under heavy restart churn). Faster eviction = quicker, calmer recovery.
+      sessionTimeout: 10000,
+      heartbeatInterval: 3000,
+      rebalanceTimeout: 30000,
+      retry: {
+        retries: 10,
+        // A transient crash (e.g. a fetch that times out mid-rebalance) should self-heal,
+        // not kill the process — always restart the consumer loop.
+        restartOnFailure: async () => true,
+      },
+    });
   }
 
   async connect(): Promise<void> {

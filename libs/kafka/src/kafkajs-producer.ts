@@ -21,6 +21,7 @@ export class KafkaJsProducer implements MessageProducer {
       clientId: config.clientId,
       brokers: config.brokers,
       logLevel: logLevel.WARN,
+      retry: { retries: 10, initialRetryTime: 300, maxRetryTime: 30000 },
     });
     this.producer = this.kafka.producer({ idempotent: true });
   }
