@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { BadRequestException, ConflictException } from "@nestjs/common";
 import { OrderStatus, type CatalogItemMessage } from "@chowdeck/contracts";
 import { OrdersService } from "./orders.service";
-import { computeDeliveryFee, type GeoPoint } from "./delivery-fee";
+import { feeFromKm, type GeoPoint } from "./delivery-fee";
+import type { DistanceProvider, Route } from "./distance/distance-provider";
 import type { CatalogPriceReader } from "../catalog/catalog-price-reader";
 
 const VENDOR = "11111111-1111-1111-1111-111111111111";
@@ -32,6 +33,11 @@ function fakeCatalog(
   };
 }
 
+/** A fake distance provider returning a fixed route (or null to force the flat-fee fallback). */
+function fakeDistance(route: Route | null): DistanceProvider {
+  return { roadDistance: async () => route };
+}
+
 /** Captures what checkout would insert, so we can assert prices/totals without a real DB. */
 function captureDb() {
   const inserted: Record<string, unknown> = {};
@@ -58,6 +64,7 @@ describe("OrdersService.checkout — pricing & validation", () => {
     const svc = new OrdersService(
       { db: {} } as never,
       fakeCatalog([]), // catalog returns nothing for the requested id
+      fakeDistance(null),
     );
     await expect(
       svc.checkout(CUSTOMER, {
@@ -71,6 +78,7 @@ describe("OrdersService.checkout — pricing & validation", () => {
     const svc = new OrdersService(
       { db: {} } as never,
       fakeCatalog([item({ vendorId: "99999999-9999-9999-9999-999999999999" })]),
+      fakeDistance(null),
     );
     await expect(
       svc.checkout(CUSTOMER, {
@@ -84,6 +92,7 @@ describe("OrdersService.checkout — pricing & validation", () => {
     const svc = new OrdersService(
       { db: {} } as never,
       fakeCatalog([item({ isAvailable: false })]),
+      fakeDistance(null),
     );
     await expect(
       svc.checkout(CUSTOMER, {
@@ -102,6 +111,7 @@ describe("OrdersService.checkout — pricing & validation", () => {
         item({ id: ITEM_A, priceKobo: 250000 }),
         item({ id: ITEM_B, priceKobo: 100000 }),
       ]),
+      fakeDistance(null), // no locations → flat fee
     );
     // getForCustomer reads the DB at the end — stub it, we only assert the writes.
     vi.spyOn(svc, "getForCustomer").mockResolvedValue({
@@ -145,15 +155,17 @@ describe("OrdersService.checkout — pricing & validation", () => {
     });
   });
 
-  it("uses a distance-based delivery fee when vendor + customer locations are known", async () => {
+  it("uses the provider's road distance for the fee + ETA when locations are known", async () => {
     process.env.DELIVERY_FEE_BASE_KOBO = "30000";
     process.env.DELIVERY_FEE_PER_KM_KOBO = "5000";
     const vendorLoc = { lat: 6.5, lng: 3.3 };
     const customerLoc = { lat: 6.6, lng: 3.4 };
+    const route = { km: 6, etaMinutes: 14.6 };
     const { db, inserted } = captureDb();
     const svc = new OrdersService(
       { db } as never,
       fakeCatalog([item({ id: ITEM_A, priceKobo: 250000 })], vendorLoc),
+      fakeDistance(route),
     );
     vi.spyOn(svc, "getForCustomer").mockResolvedValue({
       order: {} as never,
@@ -170,16 +182,47 @@ describe("OrdersService.checkout — pricing & validation", () => {
     const order = inserted.order as {
       deliveryFeeKobo: number;
       deliveryLat: number;
+      etaMinutes: number;
       totalKobo: number;
     };
-    const expectedFee = computeDeliveryFee(vendorLoc, customerLoc, {
+    const expectedFee = feeFromKm(route.km, {
       baseKobo: 30000,
       perKmKobo: 5000,
       flatKobo: 50000,
     });
-    expect(expectedFee).toBeGreaterThan(30000); // base + some distance
+    expect(expectedFee).toBe(30000 + 5000 * 6);
     expect(order.deliveryFeeKobo).toBe(expectedFee);
     expect(order.deliveryLat).toBe(customerLoc.lat);
+    expect(order.etaMinutes).toBe(15); // rounded from 14.6
     expect(order.totalKobo).toBe(250000 + expectedFee);
+  });
+
+  it("falls back to the flat fee (and no ETA) when the provider can't route", async () => {
+    process.env.DELIVERY_FEE_KOBO = "50000";
+    const vendorLoc = { lat: 6.5, lng: 3.3 };
+    const { db, inserted } = captureDb();
+    const svc = new OrdersService(
+      { db } as never,
+      fakeCatalog([item({ id: ITEM_A, priceKobo: 250000 })], vendorLoc),
+      fakeDistance(null),
+    );
+    vi.spyOn(svc, "getForCustomer").mockResolvedValue({
+      order: {} as never,
+      items: [],
+    });
+
+    await svc.checkout(CUSTOMER, {
+      vendorId: VENDOR,
+      items: [{ itemId: ITEM_A, quantity: 1 }],
+      deliveryLat: 6.6,
+      deliveryLng: 3.4,
+    });
+
+    const order = inserted.order as {
+      deliveryFeeKobo: number;
+      etaMinutes: number | null;
+    };
+    expect(order.deliveryFeeKobo).toBe(50000);
+    expect(order.etaMinutes).toBeNull();
   });
 });

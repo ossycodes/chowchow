@@ -1,0 +1,1 @@
+ALTER TABLE `orders` ADD `eta_minutes` int;

@@ -29,6 +29,8 @@ export const orders = mysqlTable(
     deliveryLng: double("delivery_lng"),
     // Delivery fee (rider's share) in kobo. totalKobo already includes it.
     deliveryFeeKobo: int("delivery_fee_kobo").notNull().default(0),
+    // Estimated delivery time in minutes from the distance provider. Null if not computed.
+    etaMinutes: int("eta_minutes"),
     totalKobo: int("total_kobo").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
