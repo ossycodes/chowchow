@@ -34,5 +34,6 @@ little jargon as possible. If the code is the "how", these are the "what and why
 24. [A Fairer Fee — delivery by distance](24-fair-delivery-fee-by-distance.md)
 25. [A Real Payment Provider — webhooks](25-a-real-payment-provider-webhooks.md)
 26. [Consumers That Recover Quickly — Kafka resilience](26-consumers-that-recover-quickly.md)
+27. [Real Roads and "When Will It Arrive?" — road distance & ETA](27-real-road-distance-and-eta.md)
 
 _(More added as we build. See the roadmap in [../ARCHITECTURE.md](../ARCHITECTURE.md).)_

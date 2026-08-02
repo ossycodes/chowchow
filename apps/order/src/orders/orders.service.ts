@@ -22,7 +22,11 @@ import { orderItems, orders, outboxEvents } from "../db/schema";
 import { CATALOG_PRICE_READER } from "../catalog/catalog.tokens";
 import type { CatalogPriceReader } from "../catalog/catalog-price-reader";
 import { canTransition } from "./order-status";
-import { computeDeliveryFee, type DeliveryFeeConfig } from "./delivery-fee";
+import { feeFromKm, type DeliveryFeeConfig } from "./delivery-fee";
+import {
+  DISTANCE_PROVIDER,
+  type DistanceProvider,
+} from "./distance/distance-provider";
 import type { CreateOrderRequest } from "./dto/create-order.request";
 
 export type OrderRow = typeof orders.$inferSelect;
@@ -44,6 +48,8 @@ export class OrdersService {
     private readonly dbService: DbService,
     @Inject(CATALOG_PRICE_READER)
     private readonly catalog: CatalogPriceReader,
+    @Inject(DISTANCE_PROVIDER)
+    private readonly distance: DistanceProvider,
   ) {}
 
   /**
@@ -88,18 +94,22 @@ export class OrdersService {
 
     const subtotalKobo = lines.reduce((sum, l) => sum + l.lineTotalKobo, 0);
 
-    // Distance-based delivery fee: vendor pickup (from catalog) → customer drop-off (from the
-    // request). Falls back to a flat fee when either location is missing.
+    // Distance-based delivery fee + ETA: route the vendor pickup (from catalog) → customer
+    // drop-off (from the request) via the distance provider. Falls back to a flat fee (and no
+    // ETA) when a location is missing or the provider can't route.
     const customerLoc =
       input.deliveryLat != null && input.deliveryLng != null
         ? { lat: input.deliveryLat, lng: input.deliveryLng }
         : null;
     const vendorLoc = await this.catalog.getVendorLocation(input.vendorId);
-    const deliveryFeeKobo = computeDeliveryFee(
-      vendorLoc,
-      customerLoc,
-      this.feeConfig,
-    );
+    const route =
+      vendorLoc && customerLoc
+        ? await this.distance.roadDistance(vendorLoc, customerLoc)
+        : null;
+    const deliveryFeeKobo = route
+      ? feeFromKm(route.km, this.feeConfig)
+      : this.feeConfig.flatKobo;
+    const etaMinutes = route ? Math.round(route.etaMinutes) : null;
     const totalKobo = subtotalKobo + deliveryFeeKobo;
 
     const payload: OrderCreated = {
@@ -125,6 +135,7 @@ export class OrdersService {
         deliveryLat: customerLoc?.lat,
         deliveryLng: customerLoc?.lng,
         deliveryFeeKobo,
+        etaMinutes,
         totalKobo,
       });
       await tx.insert(orderItems).values(lines);

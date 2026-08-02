@@ -14,9 +14,10 @@ import {
 import { OrderConsumerRunner } from "../messaging/order-consumer.runner";
 import { OrdersController } from "./orders.controller";
 import { OrdersService } from "./orders.service";
+import { DistanceModule } from "./distance/distance.module";
 
 @Module({
-  imports: [CatalogClientModule],
+  imports: [CatalogClientModule, DistanceModule],
   controllers: [OrdersController],
   providers: [
     OrdersService,

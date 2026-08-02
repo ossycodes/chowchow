@@ -116,7 +116,9 @@ IID=$(curl -s -X POST $G/catalog/vendors/$VID/items -H "Authorization: Bearer $T
 
 # --- checkout (order fetches the price from catalog over gRPC — you send ids only) ---
 # Optionally add "deliveryLat"/"deliveryLng" to the body: if set and the vendor has a
-# location, the delivery fee becomes distance-based (base + perKm × km), else it's flat.
+# location, the DistanceProvider measures the route (haversine by default, or OSRM via
+# DISTANCE_PROVIDER=osrm) — the fee becomes distance-based (base + perKm × km) and the
+# order gets an "etaMinutes". Missing location or a provider error → flat fee, no ETA.
 OID=$(curl -s -X POST $G/orders -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"vendorId":"'"$VID"'","items":[{"itemId":"'"$IID"'","quantity":2}]}' \

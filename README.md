@@ -176,9 +176,14 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
 - [x] **Payout scheduler:** `settlements` can run vendor + rider payouts automatically on a
       timer (`SETTLEMENT_SCHEDULE_ENABLED` / `SETTLEMENT_INTERVAL_MS`); manual `/run` endpoints
       remain as an ops override. In-flight guard; idempotent payouts. *(current)*
-- [x] **Distance-based delivery fee:** the fee is `base + perKm × distance` (vendor→customer,
-      haversine) when both locations are known; `order` fetches the vendor location from
-      `catalog` over gRPC and takes the customer's from checkout; flat fallback otherwise.
+- [x] **Distance-based delivery fee:** the fee is `base + perKm × distance` (vendor→customer)
+      when both locations are known; `order` fetches the vendor location from `catalog` over
+      gRPC and takes the customer's from checkout; flat fallback otherwise. *(current)*
+- [x] **Road distance & ETA (maps) provider:** a swappable `DistanceProvider` port measures
+      the route — `haversine` (offline default: straight-line × `ROAD_FACTOR`, ETA from
+      `AVG_SPEED_KMH`) or `osrm` (`DISTANCE_PROVIDER=osrm`, real road distance + duration from
+      an OSRM server). The km drives the fee; the order carries an `etaMinutes`. A provider
+      error/timeout falls back to the flat fee — a maps outage never blocks checkout.
       *(current)*
 - [x] **Async payment provider:** `payments` supports a Paystack-style adapter
       (`PAYMENT_PROVIDER=paystack`) — charge stays PENDING until a **signed webhook**
@@ -187,7 +192,7 @@ Kafka console UI: <http://localhost:8080> · Redpanda broker: `localhost:9092`
 - [x] **Consumer resilience:** shared Kafka consumer tuned for graceful recovery — shorter
       session timeout (10s) so a killed member is evicted fast, `restartOnFailure` self-heal,
       client retries. A restarted consumer rejoins in ~4s with no crash storm. *(current)*
-- [ ] Phase 3 (cont.) — real bank-transfer payout provider; road-distance/ETA (maps) provider
+- [ ] Phase 3 (cont.) — real bank-transfer payout provider
 - [ ] Phase 4 — ops & scale (Kubernetes)
 
 See the roadmap in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#10-phased-roadmap).
